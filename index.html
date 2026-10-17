@@ -1,1 +1,26 @@
-<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mijn app</title></head><body style="font-family:-apple-system,sans-serif;padding:24px"><h1>Mijn app</h1><p>De verbinding werkt. Hier komt de app.</p></body></html>
+<!doctype html><html lang="nl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="theme-color" content="#1f3a5f">
+<link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Mijn app</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--ink:#1d2430;--mut:#6b7380;--acc:#1f3a5f;--line:#e4e0d6;--dag:#f2c14e;--nacht:#3d5a99;--feest:#c8503c;--school:#f5dfc4}
+@media(prefers-color-scheme:dark){:root{--bg:#14181f;--card:#1d232d;--ink:#eef0f4;--mut:#9aa3b2;--acc:#8fb0e6;--line:#2c3441;--school:#4a3d2a}}
+*{box-sizing:border-box}body{margin:0;font:16px/1.4 -apple-system,system-ui,sans-serif;background:var(--bg);color:var(--ink);padding:env(safe-area-inset-top) 16px 40px}
+main{max-width:640px;margin:0 auto;padding-top:16px}h1{font-size:24px;margin:8px 0 16px}h2{font-size:18px;margin:20px 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+button{font:inherit;border:0;border-radius:10px;padding:12px 16px;background:var(--acc);color:#fff;min-height:44px}
+button.ghost{background:transparent;color:var(--acc);border:1px solid var(--line)}
+input{font:inherit;width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);margin:6px 0}
+.tile{display:block;width:100%;text-align:left;background:var(--card);color:var(--ink);border:1px solid var(--line);margin-bottom:10px;padding:14px 16px}
+.tile small{display:block;color:var(--mut)}.mut{color:var(--mut);font-size:14px}.row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.dow{font-size:12px;color:var(--mut);text-align:center}
+.day{min-height:56px;border-radius:8px;border:1px solid var(--line);padding:3px;font-size:13px;position:relative;background:var(--card);color:var(--ink);text-align:left}
+.day.school{background:var(--school)}.day.today{outline:3px solid var(--acc)}.day .s{display:block;font-size:11px;font-weight:600;border-radius:4px;margin-top:2px;padding:0 3px;width:fit-content}
+.s.Dag{background:var(--dag);color:#222}.s.Nacht{background:var(--nacht);color:#fff}.day .f{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--feest)}
+.day .v{position:absolute;bottom:2px;right:4px;font-size:10px}.badge{font-size:10px;background:#2d8a4e;color:#fff;border-radius:4px;padding:0 3px;display:inline-block}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#e6c300}.err{color:#c0392b;min-height:20px}
+</style></head><body><main id="app"></main>
+<script src="js/app.js"></script>
+<script>if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js')</script>
+</body></html>
