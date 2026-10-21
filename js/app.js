@@ -232,7 +232,7 @@ if (typeof document !== 'undefined') (function () {
       if (uw) exL.push(`${d} ${MAANDEN[m]} · ${ex ? uw.text : 'Uurwissel, geen invloed op je rooster'}`);
       const dot = h ? '#EF4444' : (uw && !ex ? '#FCD34D' : null);
       cells += `<button class="day${today ? ' tod' : ''}" data-k="${key}" style="background:${lv ? '#fff' : COL[sh][0]};color:${lv ? '#0A1A3F' : COL[sh][1]}">
-        <span class="n${today ? ' tn' : ''}">${d}${today ? ' · vandaag' : ''}</span>
+        <span class="n">${d}</span>
         <span class="${lv ? 'vb' : 'sh'}">${lv ? 'Verlof' : sh}</span>${lv && sh !== 'Off' ? `<span class="sub">(${sh})</span>` : ''}${ex && !lv ? `<span class="xb">${uw.badge}</span>` : ''}
         ${dot ? `<u style="background:${dot}"></u>` : ''}${isSchool(y, m, d) ? '<b></b>' : ''}</button>`;
     }
