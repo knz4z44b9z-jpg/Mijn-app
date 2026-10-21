@@ -41,7 +41,31 @@ function isSchool(y, m, d) {
   const t = dn(y, m, d);
   return SCHOOL.some(r => t >= dn(r[0], r[1] - 1, r[2]) && t <= dn(r[3], r[4] - 1, r[5]));
 }
-if (typeof module !== 'undefined') module.exports = { shiftOf, CYC, easter, holidays, uurwissel, lastSunday, isSchool };
+
+// Voetbal: KFC Moerbeke B — [jaar, maand(1-12), dag, uur|tekst, thuis(1)/uit(0), tegenstander]
+const MATCHES = [[2026,10,16,"20:00",0,"FC Assenede B"],[2026,10,23,"20:00",1,"KVVK Basevelde"],[2026,11,1,"10:00",0,"Jago St.-A'berg"],[2026,11,8,"10:00",1,"KFC St-Kruis-W B"],[2026,11,15,"10:00",0,"SV Zaffelare B"],[2026,11,22,"10:00",1,"FCDKG Beervelde B"],[2026,11,27,"20:00",0,"KVV Laarne-Kalken B"],[2026,12,4,"Algemeen niet-opkomen",1,"FC Daknam"],[2026,12,14,"20:00",0,"Santos Gent"],[2026,12,18,"20:00",1,"KVVE Massemen B"],[2027,1,10,"11:00",0,"FC Genclerbirligi Zele"],[2027,1,15,"20:00",1,"KFC Heikant Zele B"],[2027,1,24,"10:00",0,"FCDKG Beervelde B"],[2027,1,31,"10:00",1,"SK Lochristi C"],[2027,2,14,"10:00",1,"SV Zaffelare B"],[2027,2,19,"20:00",0,"KVVK Basevelde"],[2027,2,26,"20:00",1,"KVV Laarne-Kalken B"],[2027,3,5,"20:00",0,"KVVE Massemen B"],[2027,3,12,"20:00",1,"Jago St.-A'berg"],[2027,3,21,"10:00",0,"KFC St-Kruis-W B"],[2027,4,3,"Algemeen niet-opkomen",0,"FC Daknam"],[2027,4,9,"20:00",1,"FCSKV Overmere"],[2027,4,18,"10:00",0,"KFC Eksaarde C"],[2027,4,23,"20:00",1,"FC Assenede B"]];
+const HMS = 3600000;
+function parseMatch(r) {
+  const hm = r[3].indexOf(':') > 0 ? r[3].split(':') : null, dayT = Date.UTC(r[0], r[1] - 1, r[2]);
+  return { y: r[0], m: r[1] - 1, d: r[2], dayT, start: hm ? dayT + Number(hm[0]) * HMS + Number(hm[1]) * 60000 : null, time: r[3], home: r[4] === 1, opp: r[5] };
+}
+// Kan / Krap / Botst: wedstrijd telt van 1 u voor de aftrap tot 2,5 u erna; overlap = Botst; minder dan 4 u ruimte = Krap
+function rateMatch(mt) {
+  if (mt.start === null) return null;
+  const w0 = mt.start - HMS, w1 = mt.start + 2.5 * HMS; let best = null;
+  for (let k = -1; k <= 1; k++) {
+    const dT = mt.dayT + k * DAYMS, sh = shiftOf(...ymd(dT)); if (sh === 'Off') continue;
+    const a = sh === 'Dag' ? dT + 7 * HMS : dT + 19 * HMS, b = a + 12 * HMS;
+    if (a < w1 && b > w0) return { lvl: 'Botst', sh };
+    const gap = a >= w1 ? a - w1 : w0 - b; if (best === null || gap < best.gap) best = { gap, sh };
+  }
+  return best !== null && best.gap < 4 * HMS ? { lvl: 'Krap', sh: best.sh } : { lvl: 'Kan', sh: '' };
+}
+function ymd(t) { const d = new Date(t); return [d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()]; }
+function upcomingMatches(nowT, todayT) {
+  return MATCHES.map(parseMatch).filter(mt => mt.start === null ? mt.dayT >= todayT : mt.start + 2.5 * HMS > nowT);
+}
+if (typeof module !== 'undefined') module.exports = { parseMatch, rateMatch, upcomingMatches, MATCHES, shiftOf, CYC, easter, holidays, uurwissel, lastSunday, isSchool };
 
 /* ---------- Beveiliging: toegangscode -> AES-GCM ---------- */
 if (typeof document !== 'undefined') (function () {
@@ -109,7 +133,7 @@ if (typeof document !== 'undefined') (function () {
   /* ----- Hoofdmenu ----- */
   const MODULES = [
     ['Werkkalender', 'Je ploegenrooster, verlof en uurwissel', werkkalender],
-    ['Voetbal', 'Wedstrijden van KFC Moerbeke B', soon],
+    ['Voetbal', 'Wedstrijden van KFC Moerbeke B', voetbal],
     ['Financieel', 'Leefbudget, schulden, beleggen, pensioen …', soon]
   ];
   function soon(name) {
@@ -139,8 +163,47 @@ if (typeof document !== 'undefined') (function () {
 
   /* ----- Werkkalender ----- */
   const MAANDEN = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
-  let cur = null;
+  let cur = null, mode = 'maand';
+  const DN = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
+  function localParts() { const n = new Date(); return { todayT: Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()), nowT: Date.UTC(n.getFullYear(), n.getMonth(), n.getDate(), n.getHours(), n.getMinutes()) }; }
+  function voetbal(name) {
+    const { todayT, nowT } = localParts(), up = upcomingMatches(nowT, todayT), nx = up.find(x => x.start !== null);
+    const row = mt => { const r = rateMatch(mt), dd = new Date(mt.dayT); return `<div class="card"><div class="row"><b>${DN[dd.getUTCDay()]} ${mt.d} ${MAANDEN[mt.m]}</b><span class="pill ${mt.home ? 'thuis' : 'uit'}">${mt.home ? 'Thuis' : 'Uit'}</span></div>
+      <div>${esc(mt.opp)}</div><div class="row"><span class="mut">${esc(mt.time)}</span>${r ? `<span class="pill ${r.lvl}">${r.lvl}${r.sh ? ' · ' + r.sh : ''}</span>` : ''}</div></div>`; };
+    app.innerHTML = `<p><button class="ghost" id="back">‹ Terug</button></p><h1>${esc(name)}</h1>
+      <div class="card"><div class="mut">Volgende wedstrijd</div>${nx ? `<h2 style="margin:4px 0">${esc(nx.opp)}</h2><div>${DN[new Date(nx.dayT).getUTCDay()]} ${nx.d} ${MAANDEN[nx.m]} · ${nx.time} · ${nx.home ? 'thuis' : 'uit'}</div>
+      <div class="mut">Nog ${Math.round((nx.dayT - todayT) / DAYMS)} dag(en)</div>` : '<div>Geen wedstrijd gepland</div>'}</div>
+      <h2>Komende wedstrijden (${up.length})</h2>${up.map(row).join('')}
+      <p class="mut">Botst = overlapt met een shift. Krap = minder dan 4 uur ruimte. Kan = geen probleem. Uitslagen en rangschikking volgen in een volgende versie.</p>`;
+    document.getElementById('back').onclick = home;
+  }
+  function jaarKalender() {
+    const y = cur.y, now = new Date(), hol = holidays(y); let out = '';
+    for (let m = 0; m < 12; m++) {
+      const lead = (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7, days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+      let c = '<i></i>'.repeat(lead);
+      for (let d = 1; d <= days; d++) {
+        const sh = shiftOf(y, m, d), t = y === now.getFullYear() && m === now.getMonth() && d === now.getDate();
+        c += `<i class="y ${sh}${isSchool(y, m, d) ? ' sc' : ''}${t ? ' td' : ''}${data.verlof[y + '-' + m + '-' + d] ? ' vl' : ''}${hol[m + '-' + d] ? ' fe' : ''}">${d}</i>`;
+      }
+      out += `<button class="ym" data-m="${m}"><b>${MAANDEN[m]}</b><div class="yg">${c}</div></button>`;
+    }
+    app.innerHTML = `<p><button class="ghost" id="back">‹ Terug</button></p><h1>Werkkalender</h1>
+      <div class="row"><button class="ghost" id="pv">‹</button><b>${y}</b><button class="ghost" id="nx">›</button></div>
+      <p><button class="ghost" id="tm">Maand</button> <button id="ty">Jaar</button></p><div class="yr">${out}</div>${legende()}`;
+    document.getElementById('back').onclick = home;
+    document.getElementById('pv').onclick = () => { cur.y--; jaarKalender(); };
+    document.getElementById('nx').onclick = () => { cur.y++; jaarKalender(); };
+    document.getElementById('tm').onclick = () => { mode = 'maand'; werkkalender(); };
+    app.querySelectorAll('.ym').forEach(b => b.onclick = () => { cur.m = +b.dataset.m; mode = 'maand'; werkkalender(); });
+  }
+  function legende() {
+    return `<div class="card legend"><div><span class="s Dag">Dag</span> 7u–19u</div><div><span class="s Nacht">Nacht</span> 19u–7u</div>
+      <div><i class="f2"></i> Feestdag</div><div><span class="badge">+1u</span> Extra uur door uurwissel</div><div><span class="dot"></span> Uurwissel, geen invloed op je rooster</div>
+      <div><span class="sw"></span> Schoolvakantie</div><div><b>verlof</b> = verlofdag</div></div>`;
+  }
   function werkkalender() {
+    if (mode === 'jaar' && cur) return jaarKalender();
     const now = new Date();
     if (!cur) cur = { y: now.getFullYear(), m: now.getMonth() };
     const { y, m } = cur, hol = holidays(y), first = new Date(Date.UTC(y, m, 1)), lead = (first.getUTCDay() + 6) % 7;
@@ -158,10 +221,11 @@ if (typeof document !== 'undefined') (function () {
     }
     app.innerHTML = `<p><button class="ghost" id="back">‹ Terug</button></p><h1>Werkkalender</h1>
       <div class="row"><button class="ghost" id="pv">‹</button><b>${MAANDEN[m]} ${y}</b><button class="ghost" id="nx">›</button></div>
-      <div class="grid" style="margin-top:10px">${['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'].map(x => `<div class="dow">${x}</div>`).join('')}${cells}</div>
+      <p><button id="tm">Maand</button> <button class="ghost" id="ty">Jaar</button></p><div class="grid" style="margin-top:10px">${['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'].map(x => `<div class="dow">${x}</div>`).join('')}${cells}</div>
       <div class="card" style="margin-top:12px"><p class="mut">Tik op een dag om verlof aan of uit te zetten. Beige = schoolvakantie, rood puntje = feestdag, omkaderd = vandaag.</p>
-      ${notes.length ? '<ul>' + notes.map(n => `<li>${esc(n)}</li>`).join('') + '</ul>' : ''}</div>`;
+      ${notes.length ? '<ul>' + notes.map(n => `<li>${esc(n)}</li>`).join('') + '</ul>' : ''}</div>${legende()}`;
     document.getElementById('back').onclick = home;
+    document.getElementById('ty').onclick = () => { mode = 'jaar'; jaarKalender(); };
     document.getElementById('pv').onclick = () => { cur.m--; if (cur.m < 0) { cur.m = 11; cur.y--; } werkkalender(); };
     document.getElementById('nx').onclick = () => { cur.m++; if (cur.m > 11) { cur.m = 0; cur.y++; } werkkalender(); };
     app.querySelectorAll('.day').forEach(b => b.onclick = async () => {
