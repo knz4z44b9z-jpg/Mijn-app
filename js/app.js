@@ -149,6 +149,8 @@ if (typeof document !== 'undefined') (function () {
   }
 
   /* ----- Financieel ----- */
+  let fromDash = false;
+  const backFin = () => (fromDash ? home() : financieel('Financieel'));
   const euro = (n, dec) => '€ ' + Number(n).toLocaleString('nl-BE', { minimumFractionDigits: dec || 0, maximumFractionDigits: dec || 0 });
   const signed = (n, dec) => (n < 0 ? '− ' : '+ ') + euro(Math.abs(n), dec);
   const noData = name => `<p><button class="ghost" id="back">← Terug</button></p><h1>${esc(name)}</h1><div class="card">Nog geen gegevens. Laad je gegevensbestand in via het hoofdmenu → <b>Gegevens inladen</b>.</div>`;
@@ -159,13 +161,13 @@ if (typeof document !== 'undefined') (function () {
       <button class="tile" id="f-sch"><b>Schulden</b><small>Hypotheek en autolening</small></button>
       <p class="mut">Leefbudget, Inkomsten, Spaarplan, Pensioen, Loonbarema, Index en Vermogen volgen.</p>`;
     document.getElementById('back').onclick = home;
-    document.getElementById('f-bel').onclick = () => beleggen('Beleggen');
-    document.getElementById('f-sch').onclick = () => schulden('Schulden');
-    document.getElementById('f-ink').onclick = () => inkomsten('Inkomsten');
+    document.getElementById('f-bel').onclick = () => { fromDash = false; beleggen('Beleggen'); };
+    document.getElementById('f-sch').onclick = () => { fromDash = false; schulden('Schulden'); };
+    document.getElementById('f-ink').onclick = () => { fromDash = false; inkomsten('Inkomsten'); };
   }
   let who = 'totaal';
   function beleggen(name) {
-    const B = data.beleggen; if (!B) { app.innerHTML = noData(name); document.getElementById('back').onclick = financieel.bind(null, 'Financieel'); return; }
+    const B = data.beleggen; if (!B) { app.innerHTML = noData(name); document.getElementById('back').onclick = backFin; return; }
     const G = B.gestort, S = B.strategie, vals = S[who], tot = vals.reduce((a, b) => a + b, 0);
     const rows = vals.map((v, i) => {
       const pct = Math.round(v / tot * 100), t = S.doel[i], kind = pct < t ? 'buy' : (pct - t > 5 ? 'stop' : 'ok');
@@ -196,12 +198,12 @@ if (typeof document !== 'undefined') (function () {
         <div class="row li2"><b>Totaal Saxo</b><b>${euro(B.saxo)} · <span class="${B.saxoRes < 0 ? 'neg' : 'pos'}">${signed(B.saxoRes)} · −${Math.abs(B.saxoResPct).toFixed(1).replace('.', ',')}%</span></b></div>
         <p class="mut2">Telt mee in het totaal van beleggen, maar niet in de percentages van ${S.doel.join('-')}. Lange horizon, dus beperkt houden.</p></div>
       <p class="mut2">De koersen worden bijgewerkt wanneer je een nieuw gegevensbestand inlaadt (hoofdmenu → Gegevens inladen).</p>`;
-    document.getElementById('back').onclick = financieel.bind(null, 'Financieel');
+    document.getElementById('back').onclick = backFin;
     app.querySelectorAll('#wtabs button').forEach(b => b.onclick = () => { who = b.dataset.w; beleggen(name); });
   }
   let inkTab = 'jaar';
   function inkomsten(name) {
-    const I = data.inkomsten; if (!I) { app.innerHTML = noData(name); document.getElementById('back').onclick = financieel.bind(null, 'Financieel'); return; }
+    const I = data.inkomsten; if (!I) { app.innerHTML = noData(name); document.getElementById('back').onclick = backFin; return; }
     const vorig = I.jaren.find(j => j.jaar === I.jaar - 1), huidig = I.jaren.find(j => j.jaar === I.jaar), max = Math.max(...I.jaren.map(j => j.bedrag));
     const maanden = I.maanden.map(m => `<div class="card"><div class="row"><b>${esc(m.naam)}</b><b>${m.bedrag == null ? '–' : euro(m.bedrag, 2)}</b></div>
       <div class="mut2">${esc(m.status)}</div>${(m.notes || []).map(n => `<div class="mut2">• ${esc(n)}</div>`).join('')}</div>`).join('');
@@ -215,11 +217,11 @@ if (typeof document !== 'undefined') (function () {
       <div class="card"><div class="mut2">${I.jaar}</div><div class="huge">${euro(huidig.bedrag)}</div><div class="mut2">${I.jaar - 1}: ${euro(vorig.bedrag)} · ${Math.round(huidig.bedrag / vorig.bedrag * 100)}% van ${I.jaar - 1}</div></div>
       <div class="tabs"><button data-t="maand" class="${inkTab === 'maand' ? 'on' : ''}">Per maand</button><button data-t="jaar" class="${inkTab === 'jaar' ? 'on' : ''}">Per jaar</button></div>
       ${inkTab === 'maand' ? maanden : jaren + `<p class="mut2">${esc(I.noot)}</p>`}`;
-    document.getElementById('back').onclick = financieel.bind(null, 'Financieel');
+    document.getElementById('back').onclick = backFin;
     app.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { inkTab = b.dataset.t; inkomsten(name); });
   }
   function schulden(name) {
-    const D = data.schulden; if (!D) { app.innerHTML = noData(name); document.getElementById('back').onclick = financieel.bind(null, 'Financieel'); return; }
+    const D = data.schulden; if (!D) { app.innerHTML = noData(name); document.getElementById('back').onclick = backFin; return; }
     const H = D.hypotheek, A = D.auto;
     const delen = H.delen.map(d => `<div class="card"><div class="row"><b>${esc(d.naam)}</b><b>${euro(d.rest, 2)}</b></div>
       <div class="mut2">nog te betalen · waarvan ${euro(d.rente, 2)} rente</div><div class="row"><span>nog ${esc(d.nog)}</span><b>${euro(d.maand, 2)} per maand</b></div>
@@ -231,14 +233,31 @@ if (typeof document !== 'undefined') (function () {
       <h2>Hypotheek</h2><div class="card"><div class="row"><b class="big2">${euro(H.rest, 2)}</b><b>${euro(H.perMaand, 2)} per maand</b></div><div class="mut2">voor de drie delen samen · waarvan ${euro(H.rente, 2)} rente</div></div>${delen}
       <p class="mut2">${esc(H.noot)}</p>
       <h2>Autolening</h2><div class="card"><div class="row"><b class="big2">${euro(A.rest, 2)}</b><b>${euro(A.maand, 2)} per maand</b></div><div class="mut2">nog ${esc(A.nog)} · waarvan ${euro(A.rente, 2)} rente</div><div class="mut2">${esc(A.noot)}</div></div>`;
-    document.getElementById('back').onclick = financieel.bind(null, 'Financieel');
+    document.getElementById('back').onclick = backFin;
   }
 
+  function dashboard() {
+    const n = new Date(), { todayT, nowT } = localParts(), [y, m, d] = ymd(todayT), sh = shiftOf(y, m, d);
+    let nt = todayT + DAYMS, k = 0; while (shiftOf(...ymd(nt)) === 'Off' && k++ < 40) nt += DAYMS;
+    const nd = new Date(nt), nsh = shiftOf(...ymd(nt)), up = upcomingMatches(nowT, todayT).find(x => x.start !== null);
+    const card = (id, t, body) => `<button class="tile dash" data-go="${id}"><div class="row"><b>${t}</b><span class="mut2">Details ›</span></div>${body}</button>`;
+    const out = [];
+    out.push(card('wk', 'Werkkalender', `<div class="mut2">Vandaag</div><div class="row"><span class="pill sh${sh}">${sh}</span></div><div class="mut2">Volgende shift: ${DN[nd.getUTCDay()]} ${nd.getUTCDate()}/${nd.getUTCMonth() + 1} (${nsh})</div>`));
+    if (up) { const r = rateMatch(up); out.push(card('vb', 'Voetbal · KFC Moerbeke B', `<div class="mut2">Volgende wedstrijd</div><div class="big2">${esc(up.opp)}</div><div class="row"><span class="mut2">${DN[new Date(up.dayT).getUTCDay()]} ${up.d} ${MAANDEN[up.m]} · ${up.time} · ${up.home ? 'thuis' : 'uit'}</span>${r ? `<span class="pill ${r.lvl}">${r.lvl}${r.sh ? ' · ' + r.sh : ''}</span>` : ''}</div>`)); }
+    const B = data.beleggen, I = data.inkomsten, S = data.schulden;
+    if (B) out.push(card('bel', 'Beleggen', `<div class="huge">${euro(B.totaal)}</div><div class="mut2">(waarvan winst: <b>${euro(B.winst)}</b>)</div><div class="row mut2"><span>BUX <b>${euro(B.bux)}</b></span><span>Saxo <b>${euro(B.saxo)}</b></span><span>Cash <b>${euro(B.cash)}</b></span></div>`));
+    if (I) { const h = I.jaren.find(j => j.jaar === I.jaar), v = I.jaren.find(j => j.jaar === I.jaar - 1); out.push(card('ink', 'Inkomsten', `<div class="huge">${euro(h.bedrag)}</div><div class="mut2">${I.jaar} tot nu toe binnen · ${Math.round(h.bedrag / v.bedrag * 100)}% van ${I.jaar - 1}</div>`)); }
+    if (S) out.push(card('sch', 'Schulden', `<div class="big2">${euro(S.totaal, 2)}</div><div class="mut2">nog te betalen · ${S.aflossPct}% afgelost</div>`));
+    if (!B) out.push(`<div class="card mut2">Laad je gegevensbestand in (hieronder bij Gegevens) om je cijfers op het dashboard te zien.</div>`);
+    return out.join('');
+  }
   function home() {
-    app.innerHTML = `<h1>Mijn app</h1>` + MODULES.map((m, i) => `<button class="tile" data-i="${i}"><b>${m[0]}</b><small>${m[1]}</small></button>`).join('') +
+    app.innerHTML = `<h1>Dashboard</h1>` + dashboard() + `<h2>Modules</h2>` + MODULES.map((m, i) => `<button class="tile" data-i="${i}"><b>${m[0]}</b><small>${m[1]}</small></button>`).join('') +
       `<h2>Gegevens</h2><div class="card"><div class="row"><button class="ghost" id="exp">Back-up maken</button><button class="ghost" id="imp">Back-up terugzetten</button><button class="ghost" id="lock">Vergrendelen</button></div><p><button class="ghost" id="load">Gegevens inladen</button></p>
       <p class="mut">Een back-up is een versleuteld bestand. Bewaar het in iCloud Drive (Bestanden-app).</p><input type="file" id="file" hidden><input type="file" id="gfile" accept=".json" hidden></div>`;
-    app.querySelectorAll('.tile').forEach(b => b.onclick = () => MODULES[b.dataset.i][2](MODULES[b.dataset.i][0]));
+    app.querySelectorAll('.tile[data-i]').forEach(b => b.onclick = () => MODULES[b.dataset.i][2](MODULES[b.dataset.i][0]));
+    const GO = { wk: () => werkkalender(), vb: () => voetbal('Voetbal'), bel: () => beleggen('Beleggen'), ink: () => inkomsten('Inkomsten'), sch: () => schulden('Schulden') };
+    app.querySelectorAll('.tile[data-go]').forEach(b => b.onclick = () => { fromDash = true; GO[b.dataset.go](); });
     document.getElementById('lock').onclick = lockScreen;
     document.getElementById('exp').onclick = () => {
       const blob = new Blob([JSON.stringify({ salt: localStorage.getItem(K_SALT), data: localStorage.getItem(K_DATA) })], { type: 'application/json' });
