@@ -155,11 +155,13 @@ if (typeof document !== 'undefined') (function () {
   function financieel(name) {
     app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>${esc(name)}</h1>
       <button class="tile" id="f-bel"><b>Beleggen</b><small>BUX, Saxo, gestort en resultaat</small></button>
+      <button class="tile" id="f-ink"><b>Inkomsten</b><small>Wat er binnenkomt, per maand en per jaar</small></button>
       <button class="tile" id="f-sch"><b>Schulden</b><small>Hypotheek en autolening</small></button>
       <p class="mut">Leefbudget, Inkomsten, Spaarplan, Pensioen, Loonbarema, Index en Vermogen volgen.</p>`;
     document.getElementById('back').onclick = home;
     document.getElementById('f-bel').onclick = () => beleggen('Beleggen');
     document.getElementById('f-sch').onclick = () => schulden('Schulden');
+    document.getElementById('f-ink').onclick = () => inkomsten('Inkomsten');
   }
   let who = 'totaal';
   function beleggen(name) {
@@ -196,6 +198,25 @@ if (typeof document !== 'undefined') (function () {
       <p class="mut2">De koersen worden bijgewerkt wanneer je een nieuw gegevensbestand inlaadt (hoofdmenu → Gegevens inladen).</p>`;
     document.getElementById('back').onclick = financieel.bind(null, 'Financieel');
     app.querySelectorAll('#wtabs button').forEach(b => b.onclick = () => { who = b.dataset.w; beleggen(name); });
+  }
+  let inkTab = 'jaar';
+  function inkomsten(name) {
+    const I = data.inkomsten; if (!I) { app.innerHTML = noData(name); document.getElementById('back').onclick = financieel.bind(null, 'Financieel'); return; }
+    const vorig = I.jaren.find(j => j.jaar === I.jaar - 1), huidig = I.jaren.find(j => j.jaar === I.jaar), max = Math.max(...I.jaren.map(j => j.bedrag));
+    const maanden = I.maanden.map(m => `<div class="card"><div class="row"><b>${esc(m.naam)}</b><b>${m.bedrag == null ? '–' : euro(m.bedrag, 2)}</b></div>
+      <div class="mut2">${esc(m.status)}</div>${(m.notes || []).map(n => `<div class="mut2">• ${esc(n)}</div>`).join('')}</div>`).join('');
+    const jaren = I.jaren.map((j, i) => {
+      const prev = I.jaren[i - 1], pct = prev ? (j.bedrag / prev.bedrag - 1) * 100 : null, lopend = j.jaar === I.jaar;
+      return `<div class="card"><div class="row"><b>${j.jaar}</b><b>${euro(j.bedrag)}</b></div><div class="bar"><i style="width:${j.bedrag / max * 100}%"></i></div>
+        <div class="row mut2"><span>${lopend ? 'Lopend' : ''}</span><span class="${lopend ? '' : pct == null ? '' : pct < 0 ? 'neg' : 'pos'}" ${lopend ? 'style="color:#FB923C"' : ''}>${pct == null ? '–' : (pct < 0 ? '−' : '+') + Math.abs(pct).toFixed(1).replace('.', ',') + '%'}</span></div></div>`;
+    }).join('');
+    app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>Inkomsten</h1><p class="mut">Wat er dit jaar binnenkwam en nog komt. Netto, jij en Marie samen.</p>
+      <div class="ok">${esc(I.badge)}</div>
+      <div class="card"><div class="mut2">${I.jaar}</div><div class="huge">${euro(huidig.bedrag)}</div><div class="mut2">${I.jaar - 1}: ${euro(vorig.bedrag)} · ${Math.round(huidig.bedrag / vorig.bedrag * 100)}% van ${I.jaar - 1}</div></div>
+      <div class="tabs"><button data-t="maand" class="${inkTab === 'maand' ? 'on' : ''}">Per maand</button><button data-t="jaar" class="${inkTab === 'jaar' ? 'on' : ''}">Per jaar</button></div>
+      ${inkTab === 'maand' ? maanden : jaren + `<p class="mut2">${esc(I.noot)}</p>`}`;
+    document.getElementById('back').onclick = financieel.bind(null, 'Financieel');
+    app.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { inkTab = b.dataset.t; inkomsten(name); });
   }
   function schulden(name) {
     const D = data.schulden; if (!D) { app.innerHTML = noData(name); document.getElementById('back').onclick = financieel.bind(null, 'Financieel'); return; }
