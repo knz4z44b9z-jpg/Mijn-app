@@ -160,6 +160,7 @@ if (typeof document !== 'undefined') (function () {
       <button class="tile" id="f-ink"><b>Inkomsten</b><small>Wat er binnenkomt, per maand en per jaar</small></button>
       <button class="tile" id="f-lb"><b>Loonbarema</b><small>Je categorie en de weddetabel</small></button>
       <button class="tile" id="f-idx"><b>Index</b><small>Gezondheidsindex en spilindex</small></button>
+      <button class="tile" id="f-pen"><b>Pensioen</b><small>Pensioensparen en loopbaan</small></button>
       <button class="tile" id="f-sch"><b>Schulden</b><small>Hypotheek en autolening</small></button>
       <p class="mut">Leefbudget, Inkomsten, Spaarplan, Pensioen, Loonbarema, Index en Vermogen volgen.</p>`;
     document.getElementById('back').onclick = home;
@@ -167,6 +168,7 @@ if (typeof document !== 'undefined') (function () {
     document.getElementById('f-sch').onclick = () => { fromDash = false; schulden('Schulden'); };
     document.getElementById('f-ink').onclick = () => { fromDash = false; inkomsten('Inkomsten'); };
     document.getElementById('f-idx').onclick = () => { fromDash = false; indexScherm('Index'); };
+    document.getElementById('f-pen').onclick = () => { fromDash = false; pensioen('Pensioen'); };
     document.getElementById('f-lb').onclick = () => { fromDash = false; loonbarema('Loonbarema'); };
   }
   let who = 'totaal';
@@ -204,6 +206,28 @@ if (typeof document !== 'undefined') (function () {
       <p class="mut2">De koersen worden bijgewerkt wanneer je een nieuw gegevensbestand inlaadt (hoofdmenu → Gegevens inladen).</p>`;
     document.getElementById('back').onclick = backFin;
     app.querySelectorAll('#wtabs button').forEach(b => b.onclick = () => { who = b.dataset.w; beleggen(name); });
+  }
+  function loopbaan(P) {
+    const jaar = new Date().getFullYear(), tot = P.einde - P.start, nu = Math.min(Math.max(jaar - P.start, 0), tot);
+    return { nu, tot, pct: nu / tot * 100 };
+  }
+  function pensioen(name) {
+    const P = data.pensioen; if (!P) { app.innerHTML = noData(name); document.getElementById('back').onclick = backFin; return; }
+    const som = x => x.fondsen.reduce((a, f) => a + f.bedrag, 0), tot = som(P.mike) + som(P.marie);
+    const blok = x => {
+      const lb = loopbaan(x);
+      return `<div class="card"><div class="row"><b class="big2">${esc(x.naam)}</b><b class="big2">${euro(som(x), 2)}</b></div>
+        <div class="row"><span>Maandelijkse inleg</span><b>${euro(x.inleg, 2)}</b></div><div class="row"><span>Fiscaal voordeel per jaar</span><b>${euro(x.voordeel)}</b></div>
+        ${x.fondsen.map(f => `<div class="li2 row"><span>${esc(f.bank)} · ${esc(f.naam)}<br><span class="mut2">${f.actief ? 'Actief' : 'Inactief'}</span></span><b>${euro(f.bedrag, 2)}</b></div>`).join('')}
+        <div class="mut2">${esc(x.stand)}</div>
+        <div class="row li2"><span>Aanvullend pensioen (werkgever)</span><b>${x.aanvullend == null ? '–' : euro(x.aanvullend, 2)}</b></div>
+        <div class="row" style="margin-top:8px"><span>Loopbaan ${esc(x.naam)}</span><b>${lb.nu} van ${lb.tot} jaar</b></div><div class="bar"><i style="width:${lb.pct}%"></i></div><div class="row mut2"><span>${x.start}</span><span>67 jaar · ${x.einde}</span></div></div>`;
+    };
+    app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>Pensioen</h1><p class="mut">Wat je opbouwt voor later.</p>
+      <div class="card"><div class="mut2">Totaal pensioensparen</div><div class="huge">${euro(tot, 2)}</div><div class="row mut2"><span>Mike <b>${euro(som(P.mike), 2)}</b></span><span>Marie <b>${euro(som(P.marie), 2)}</b></span></div></div>
+      ${blok(P.mike)}${blok(P.marie)}
+      <div class="card"><div class="row"><span>Terugbetaling cafetariaplan (via loonbrief)</span><b>${euro(P.cafetaria)} per maand</b></div></div>`;
+    document.getElementById('back').onclick = backFin;
   }
   function indexScherm(name) {
     const X = data.index; if (!X) { app.innerHTML = noData(name); document.getElementById('back').onclick = backFin; return; }
@@ -283,6 +307,8 @@ if (typeof document !== 'undefined') (function () {
     const B = data.beleggen, I = data.inkomsten, S = data.schulden;
     if (B) out.push(card('bel', 'Beleggen', `<div class="huge">${euro(B.totaal)}</div><div class="mut2">(waarvan winst: <b>${euro(B.winst)}</b>)</div><div class="row mut2"><span>BUX <b>${euro(B.bux)}</b></span><span>Saxo <b>${euro(B.saxo)}</b></span><span>Cash <b>${euro(B.cash)}</b></span></div>`));
     if (I) { const h = I.jaren.find(j => j.jaar === I.jaar), v = I.jaren.find(j => j.jaar === I.jaar - 1); out.push(card('ink', 'Inkomsten', `<div class="huge">${euro(h.bedrag)}</div><div class="mut2">${I.jaar} tot nu toe binnen · ${Math.round(h.bedrag / v.bedrag * 100)}% van ${I.jaar - 1}</div>`)); }
+    const PE = data.pensioen; if (PE) { const t = [PE.mike, PE.marie].reduce((a, x) => a + x.fondsen.reduce((b, f) => b + f.bedrag, 0), 0), l1 = loopbaan(PE.mike), l2 = loopbaan(PE.marie);
+      out.push(card('pen', 'Pensioen', `<div class="huge">${euro(t, 2)}</div><div class="mut2">totaal pensioensparen</div><div class="row mut2"><span>Loopbaan Mike ${l1.nu} van ${l1.tot} jaar</span></div><div class="bar"><i style="width:${l1.pct}%"></i></div><div class="row mut2"><span>Loopbaan Marie ${l2.nu} van ${l2.tot} jaar</span></div><div class="bar"><i style="width:${l2.pct}%"></i></div>`)); }
     const X = data.index; if (X) out.push(card('ix', 'Index', `<div class="huge">${X.waarde.toLocaleString('nl-BE', { minimumFractionDigits: 2 })}</div><div class="mut2">${esc(X.maand)} · nog ${(X.spil - X.waarde).toLocaleString('nl-BE', { minimumFractionDigits: 2 })} punten tot de spilindex</div>`));
     const L = data.loonbarema; if (L) out.push(card('lb', 'Loonbarema', `<div class="mut2">Categorie ${L.categorie}${String(L.anc).padStart(2, '0')}</div><div class="row"><span>Schaduwloon</span><b>${euro(L.schaduwloon, 2)}</b></div><div class="row mut2"><span>Basismaandloon <b>${euro(L.basis, 2)}</b></span><span>Shiftpremie <b>${euro(L.shiftpremie, 2)}</b></span></div>`));
     if (S) out.push(card('sch', 'Schulden', `<div class="big2">${euro(S.totaal, 2)}</div><div class="mut2">nog te betalen · ${S.aflossPct}% afgelost</div>`));
@@ -294,7 +320,7 @@ if (typeof document !== 'undefined') (function () {
       `<h2>Gegevens</h2><div class="card"><div class="row"><button class="ghost" id="exp">Back-up maken</button><button class="ghost" id="imp">Back-up terugzetten</button><button class="ghost" id="lock">Vergrendelen</button></div><p><button class="ghost" id="load">Gegevens inladen</button></p>
       <p class="mut">Een back-up is een versleuteld bestand. Bewaar het in iCloud Drive (Bestanden-app).</p><input type="file" id="file" hidden><input type="file" id="gfile" accept=".json" hidden></div>`;
     app.querySelectorAll('.tile[data-i]').forEach(b => b.onclick = () => MODULES[b.dataset.i][2](MODULES[b.dataset.i][0]));
-    const GO = { wk: () => werkkalender(), vb: () => voetbal('Voetbal'), bel: () => beleggen('Beleggen'), ink: () => inkomsten('Inkomsten'), sch: () => schulden('Schulden'), ix: () => indexScherm('Index'), lb: () => loonbarema('Loonbarema') };
+    const GO = { wk: () => werkkalender(), vb: () => voetbal('Voetbal'), bel: () => beleggen('Beleggen'), ink: () => inkomsten('Inkomsten'), sch: () => schulden('Schulden'), pen: () => pensioen('Pensioen'), ix: () => indexScherm('Index'), lb: () => loonbarema('Loonbarema') };
     app.querySelectorAll('.tile[data-go]').forEach(b => b.onclick = () => { fromDash = true; GO[b.dataset.go](); });
     document.getElementById('lock').onclick = lockScreen;
     document.getElementById('exp').onclick = () => {
