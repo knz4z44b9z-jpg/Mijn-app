@@ -159,12 +159,14 @@ if (typeof document !== 'undefined') (function () {
       <button class="tile" id="f-bel"><b>Beleggen</b><small>BUX, Saxo, gestort en resultaat</small></button>
       <button class="tile" id="f-ink"><b>Inkomsten</b><small>Wat er binnenkomt, per maand en per jaar</small></button>
       <button class="tile" id="f-lb"><b>Loonbarema</b><small>Je categorie en de weddetabel</small></button>
+      <button class="tile" id="f-idx"><b>Index</b><small>Gezondheidsindex en spilindex</small></button>
       <button class="tile" id="f-sch"><b>Schulden</b><small>Hypotheek en autolening</small></button>
       <p class="mut">Leefbudget, Inkomsten, Spaarplan, Pensioen, Loonbarema, Index en Vermogen volgen.</p>`;
     document.getElementById('back').onclick = home;
     document.getElementById('f-bel').onclick = () => { fromDash = false; beleggen('Beleggen'); };
     document.getElementById('f-sch').onclick = () => { fromDash = false; schulden('Schulden'); };
     document.getElementById('f-ink').onclick = () => { fromDash = false; inkomsten('Inkomsten'); };
+    document.getElementById('f-idx').onclick = () => { fromDash = false; indexScherm('Index'); };
     document.getElementById('f-lb').onclick = () => { fromDash = false; loonbarema('Loonbarema'); };
   }
   let who = 'totaal';
@@ -203,12 +205,29 @@ if (typeof document !== 'undefined') (function () {
     document.getElementById('back').onclick = backFin;
     app.querySelectorAll('#wtabs button').forEach(b => b.onclick = () => { who = b.dataset.w; beleggen(name); });
   }
+  function indexScherm(name) {
+    const X = data.index; if (!X) { app.innerHTML = noData(name); document.getElementById('back').onclick = backFin; return; }
+    const nf = n => n.toLocaleString('nl-BE', { minimumFractionDigits: 2 }), te = X.spil - X.waarde, L = data.loonbarema;
+    const rows = X.tabel.map(r => `<div class="ix3"><span><b>${esc(r.maand)}</b>${r.label ? `<br><span class="mut2">${esc(r.label)}</span>` : ''}</span><span>${nf(r.waarde)}</span><span>${nf(r.spil)}</span></div>`).join('');
+    let voorjou = '';
+    if (L) { const p = X.plafond, vol = L.schaduwloon * 0.02, beperkt = p * 0.02;
+      voorjou = `<h2>Wat betekent dit voor jou?</h2><div class="card"><div class="mut2">Je schaduwloon (${euro(L.schaduwloon, 2)}) ligt boven het plafond van ${euro(p)}. Bij een indexering van 2% telt dus enkel het deel tot ${euro(p)} mee, dat is ${euro(beperkt)} in plaats van ongeveer ${euro(vol)}. Dit is een rekenvoorbeeld op basis van de regels hierboven, niet je echte indexering.</div></div>`; }
+    app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>Index</h1><p class="mut">De indexering van je loon.</p>
+      <div class="card"><div class="mut2">Afgevlakte gezondheidsindex</div><div class="huge">${nf(X.waarde)}</div><div class="mut2">${esc(X.maand)}</div></div>
+      <div class="card"><div class="mut2">Volgende spilindex (chemie)</div><div class="huge">${nf(X.spil)}</div><div class="mut2">nog ${nf(te)} punten te gaan</div></div>
+      <div class="card"><div class="mut2">Laatste overschrijding</div><div class="big2">${esc(X.overschreden.maand)}</div><div class="mut2">${nf(X.overschreden.waarde)} tegenover spilindex ${nf(X.overschreden.spil)}</div></div>
+      <h2>Zo werkt het</h2><div class="card"><div class="mut2">${esc(X.uitleg)}</div></div>
+      <h2>Maand per maand</h2><div class="card"><div class="ix3 hd"><span>Maand</span><span>Afgevlakte index</span><span>Spilindex chemie</span></div>${rows}</div><p class="mut2">${esc(X.bron)}</p>
+      <h2>Hoe werkt de centenindex?</h2><div class="card">${X.centen.map(c => `<div class="mut2">• ${esc(c)}</div>`).join('')}</div>${voorjou}
+      <div class="ok" style="background:#3a2f0b;color:#fcd34d">Datum en percentage van je echte indexeringen nog in te vullen</div>`;
+    document.getElementById('back').onclick = backFin;
+  }
   function loonbarema(name) {
     const L = data.loonbarema; if (!L) { app.innerHTML = noData(name); document.getElementById('back').onclick = backFin; return; }
     const ci = L.cats.indexOf(L.categorie), nu = L.tabel[L.anc][ci], volg = L.tabel[L.anc + 1][ci];
     const kop = '<tr><th>Anc.</th>' + L.cats.map(c => `<th>${c}</th>`).join('') + '</tr>';
     const body = L.tabel.map((r, a) => `<tr><th>${a}</th>${r.map((v, i) => `<td class="${i === ci && a === L.anc ? 'hi1' : i === ci && a === L.anc + 1 ? 'hi2' : ''}">${v.toLocaleString('nl-BE', { minimumFractionDigits: 2 })}</td>`).join('')}</tr>`).join('');
-    app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>Loonbarema</h1><p class="mut">Het barema waarop je loon gebaseerd is.</p><div class="ok">Weddetabel uit je eigen bestand</div>
+    app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>Loonbarema</h1><p class="mut">Het barema waarop je loon gebaseerd is.</p><div class="ok">Weddetabel uit je eigen bestand${L.geldigVanaf ? ' · geldt vanaf ' + esc(L.geldigVanaf) : ''}</div>
       <div class="card"><div class="mut2">${esc(L.naam)}</div><div class="big2">Categorie ${L.categorie}${String(L.anc).padStart(2, '0')}</div>
         <div class="row"><span>Schaduwloon</span><b>${euro(L.schaduwloon, 2)}</b></div><div class="row"><span>Basismaandloon</span><b>${euro(L.basis, 2)}</b></div><div class="row"><span>Shiftpremie</span><b>${euro(L.shiftpremie, 2)}</b></div></div>
       <h2>Volgende stappen</h2>
@@ -264,6 +283,7 @@ if (typeof document !== 'undefined') (function () {
     const B = data.beleggen, I = data.inkomsten, S = data.schulden;
     if (B) out.push(card('bel', 'Beleggen', `<div class="huge">${euro(B.totaal)}</div><div class="mut2">(waarvan winst: <b>${euro(B.winst)}</b>)</div><div class="row mut2"><span>BUX <b>${euro(B.bux)}</b></span><span>Saxo <b>${euro(B.saxo)}</b></span><span>Cash <b>${euro(B.cash)}</b></span></div>`));
     if (I) { const h = I.jaren.find(j => j.jaar === I.jaar), v = I.jaren.find(j => j.jaar === I.jaar - 1); out.push(card('ink', 'Inkomsten', `<div class="huge">${euro(h.bedrag)}</div><div class="mut2">${I.jaar} tot nu toe binnen · ${Math.round(h.bedrag / v.bedrag * 100)}% van ${I.jaar - 1}</div>`)); }
+    const X = data.index; if (X) out.push(card('ix', 'Index', `<div class="huge">${X.waarde.toLocaleString('nl-BE', { minimumFractionDigits: 2 })}</div><div class="mut2">${esc(X.maand)} · nog ${(X.spil - X.waarde).toLocaleString('nl-BE', { minimumFractionDigits: 2 })} punten tot de spilindex</div>`));
     const L = data.loonbarema; if (L) out.push(card('lb', 'Loonbarema', `<div class="mut2">Categorie ${L.categorie}${String(L.anc).padStart(2, '0')}</div><div class="row"><span>Schaduwloon</span><b>${euro(L.schaduwloon, 2)}</b></div><div class="row mut2"><span>Basismaandloon <b>${euro(L.basis, 2)}</b></span><span>Shiftpremie <b>${euro(L.shiftpremie, 2)}</b></span></div>`));
     if (S) out.push(card('sch', 'Schulden', `<div class="big2">${euro(S.totaal, 2)}</div><div class="mut2">nog te betalen · ${S.aflossPct}% afgelost</div>`));
     if (!B) out.push(`<div class="card mut2">Laad je gegevensbestand in (hieronder bij Gegevens) om je cijfers op het dashboard te zien.</div>`);
@@ -274,7 +294,7 @@ if (typeof document !== 'undefined') (function () {
       `<h2>Gegevens</h2><div class="card"><div class="row"><button class="ghost" id="exp">Back-up maken</button><button class="ghost" id="imp">Back-up terugzetten</button><button class="ghost" id="lock">Vergrendelen</button></div><p><button class="ghost" id="load">Gegevens inladen</button></p>
       <p class="mut">Een back-up is een versleuteld bestand. Bewaar het in iCloud Drive (Bestanden-app).</p><input type="file" id="file" hidden><input type="file" id="gfile" accept=".json" hidden></div>`;
     app.querySelectorAll('.tile[data-i]').forEach(b => b.onclick = () => MODULES[b.dataset.i][2](MODULES[b.dataset.i][0]));
-    const GO = { wk: () => werkkalender(), vb: () => voetbal('Voetbal'), bel: () => beleggen('Beleggen'), ink: () => inkomsten('Inkomsten'), sch: () => schulden('Schulden'), lb: () => loonbarema('Loonbarema') };
+    const GO = { wk: () => werkkalender(), vb: () => voetbal('Voetbal'), bel: () => beleggen('Beleggen'), ink: () => inkomsten('Inkomsten'), sch: () => schulden('Schulden'), ix: () => indexScherm('Index'), lb: () => loonbarema('Loonbarema') };
     app.querySelectorAll('.tile[data-go]').forEach(b => b.onclick = () => { fromDash = true; GO[b.dataset.go](); });
     document.getElementById('lock').onclick = lockScreen;
     document.getElementById('exp').onclick = () => {
