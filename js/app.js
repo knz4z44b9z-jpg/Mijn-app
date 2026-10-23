@@ -186,8 +186,8 @@ if (typeof document !== 'undefined') (function () {
   }
   const COL = { Off: ['#1B3573', '#C7D4F5'], Dag: ['#34D399', '#04122E'], Nacht: ['#A5B4FC', '#04122E'] };
   function legende() {
-    const sq = c => `<span class="sq" style="background:${c}"></span>`;
-    return `<div class="leg">${sq('#1B3573')}Off ${sq('#34D399')}Dag · 7u–19u ${sq('#A5B4FC')}Nacht · 19u–7u <span class="vb">Verlof</span></div>`;
+    const sq = (c, t) => `<span class="it"><span class="sq" style="background:${c}"></span>${t}</span>`;
+    return `<div class="leg">${sq('#1B3573', 'Off')}${sq('#34D399', 'Dag · 7u–19u')}${sq('#A5B4FC', 'Nacht · 19u–7u')}<span class="it"><span class="vb">Verlof</span></span></div>`;
   }
   function tabs(active) {
     return `<div class="tabs"><button id="tm" class="${active === 'maand' ? 'on' : ''}">Maand</button><button id="ty" class="${active === 'jaar' ? 'on' : ''}">Jaar</button></div>`;
@@ -206,13 +206,13 @@ if (typeof document !== 'undefined') (function () {
         const sh = shiftOf(y, m, d), lv = !!data.verlof[y + '-' + m + '-' + d], today = y === now.getFullYear() && m === now.getMonth() && d === now.getDate();
         if (lv && sh !== 'Off') leaveYear++;
         const uw = uurwissel(y, m, d), dot = hol[m + '-' + d] ? '#EF4444' : (uw && uw.who !== sh ? '#FCD34D' : null);
-        c += `<i class="y${today ? ' td' : ''}" style="background:${lv ? '#fff' : COL[sh][0]};color:${lv ? '#0A1A3F' : COL[sh][1]}">${d}${dot ? `<u style="background:${dot}"></u>` : ''}${isSchool(y, m, d) ? '<b></b>' : ''}</i>`;
+        c += `<i class="y${today ? ' td' : ''}" style="background:${lv ? '#fff' : COL[sh][0]};color:${lv ? '#0A1A3F' : COL[sh][1]}"><span class="yn">${d}</span><span class="ys">${lv ? 'V' : sh === 'Dag' ? 'D' : sh === 'Nacht' ? 'N' : 'Off'}</span>${dot ? `<u style="background:${dot}"></u>` : ''}${isSchool(y, m, d) ? '<b></b>' : ''}</i>`;
       }
       out += `<button class="ym" data-m="${m}"><span class="mt">${MAANDEN[m]}</span><div class="yg">${c}</div></button>`;
     }
     app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>Werkkalender</h1><p class="mut">Het hele jaar in één overzicht.</p>${tabs('jaar')}
       <div class="card"><div class="row"><button class="nav" id="pv" aria-label="Vorig jaar">‹</button><span class="big">${y}</span><button class="nav" id="nx" aria-label="Volgend jaar">›</button></div>
-      ${legende()}<div class="row mut2"><span>Tik op een maand om die groot te openen.</span><b>Verlof dit jaar: ${leaveYear} dag${leaveYear === 1 ? '' : 'en'}</b></div><div class="yr">${out}</div></div>`;
+      <div class="leg"><span class="it"><span class="sq" style="background:#34D399"></span>D = Dag · 7u–19u</span><span class="it"><span class="sq" style="background:#A5B4FC"></span>N = Nacht · 19u–7u</span><span class="it"><span class="sq" style="background:#1B3573"></span>Off</span><span class="it"><span class="vb">V</span> Verlof</span></div><div class="row mut2"><span>Tik op een maand om die groot te openen.</span><b>Verlof dit jaar: ${leaveYear} dag${leaveYear === 1 ? '' : 'en'}</b></div><div class="yr">${out}</div></div>`;
     wireTabs();
     document.getElementById('pv').onclick = () => { cur.y--; jaarKalender(); };
     document.getElementById('nx').onclick = () => { cur.y++; jaarKalender(); };
