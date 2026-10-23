@@ -141,22 +141,95 @@ if (typeof document !== 'undefined') (function () {
   const MODULES = [
     ['Werkkalender', 'Je ploegenrooster, verlof en uurwissel', werkkalender],
     ['Voetbal', 'Wedstrijden van KFC Moerbeke B', voetbal],
-    ['Financieel', 'Leefbudget, schulden, beleggen, pensioen …', soon]
+    ['Financieel', 'Beleggen, schulden en meer', financieel]
   ];
   function soon(name) {
     app.innerHTML = `<p><button class="ghost" id="back">‹ Terug</button></p><h1>${esc(name)}</h1><div class="card">Deze module wordt als volgende gebouwd.</div>`;
     document.getElementById('back').onclick = home;
   }
+
+  /* ----- Financieel ----- */
+  const euro = (n, dec) => '€ ' + Number(n).toLocaleString('nl-BE', { minimumFractionDigits: dec || 0, maximumFractionDigits: dec || 0 });
+  const signed = (n, dec) => (n < 0 ? '− ' : '+ ') + euro(Math.abs(n), dec);
+  const noData = name => `<p><button class="ghost" id="back">← Terug</button></p><h1>${esc(name)}</h1><div class="card">Nog geen gegevens. Laad je gegevensbestand in via het hoofdmenu → <b>Gegevens inladen</b>.</div>`;
+  function financieel(name) {
+    app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>${esc(name)}</h1>
+      <button class="tile" id="f-bel"><b>Beleggen</b><small>BUX, Saxo, gestort en resultaat</small></button>
+      <button class="tile" id="f-sch"><b>Schulden</b><small>Hypotheek en autolening</small></button>
+      <p class="mut">Leefbudget, Inkomsten, Spaarplan, Pensioen, Loonbarema, Index en Vermogen volgen.</p>`;
+    document.getElementById('back').onclick = home;
+    document.getElementById('f-bel').onclick = () => beleggen('Beleggen');
+    document.getElementById('f-sch').onclick = () => schulden('Schulden');
+  }
+  let who = 'totaal';
+  function beleggen(name) {
+    const B = data.beleggen; if (!B) { app.innerHTML = noData(name); document.getElementById('back').onclick = financieel.bind(null, 'Financieel'); return; }
+    const G = B.gestort, S = B.strategie, vals = S[who], tot = vals.reduce((a, b) => a + b, 0);
+    const rows = vals.map((v, i) => {
+      const pct = Math.round(v / tot * 100), t = S.doel[i], kind = pct < t ? 'buy' : (pct - t > 5 ? 'stop' : 'ok');
+      const lbl = { buy: ['Bijkopen', 'Botst'], stop: ['Niet storten', 'Krap'], ok: ['Ok', 'Kan'] }[kind];
+      return `<div class="card"><div class="row"><b>${esc(S.namen[i])}</b><span class="pill ${lbl[1]}">${lbl[0]}</span></div>
+        <div class="mut2">${esc(S.uitgever[who][i] || '')}</div><div class="row"><span>${euro(v)}</span><span class="mut2">nu ${pct}% · doel ${S.doel[i]}%</span></div>
+        ${kind === 'buy' ? `<div class="mut2">Nodig voor doel: <b>${euro(S.doel[i] / 100 * tot - v)}</b></div>` : ''}</div>`;
+    }).join('');
+    const gp = tot / B.doelBedrag * 100;
+    const tabs = [['totaal', 'Totaal'], ['mezelf', 'Mezelf'], ['gezamenlijk', 'Gezamenlijk'], ['kids', 'Kids']].map(t => `<button data-w="${t[0]}" class="${t[0] === who ? 'on' : ''}">${t[1]}</button>`).join('');
+    const jaren = Object.keys(G.perJaar).map(j => `<div class="row"><span>${j}</span><b>${euro(G.perJaar[j])}</b></div>`).join('');
+    const sx = B.saxoPos.map(x => `<div class="row li2"><span>${esc(x.naam)}</span><span>${euro(x.waarde)} · <span class="${x.res < 0 ? 'neg' : 'pos'}">${signed(x.res)} · ${x.resPct < 0 ? '−' : '+'}${Math.abs(x.resPct).toFixed(1).replace('.', ',')}%</span></span></div>`).join('');
+    app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>Beleggen</h1><p class="mut">Alle waarden komen uit PDT. De app rekent ze niet zelf uit.</p>
+      <div class="ok">Cijfers uit PDT · koersen van ${esc(B.koersDatum)}</div>
+      <div class="card"><div class="mut2">Totaal beleggen</div><div class="huge">${euro(B.totaal)}</div><div class="mut2">(waarvan winst: <b>${euro(B.winst)}</b>)</div>
+        <div class="row mut2"><span>BUX <b>${euro(B.bux)}</b></span><span>Saxo <b>${euro(B.saxo)}</b></span><span>Cash <b>${euro(B.cash)}</b></span></div></div>
+      <div class="card"><h3>Gestort en resultaat · uit PDT</h3>
+        <div class="row"><span>Netto gestort</span><b>${euro(G.netto)}</b></div><div class="mut2">${esc(G.boekingen)}</div>
+        <div class="row"><span>Huidige waarde</span><b>${euro(B.totaal)}</b></div><div class="mut2">incl. cash ${euro(B.cash)}</div>
+        <div class="row"><span>Winst tot nu toe</span><b class="pos">${signed(B.winst)}</b></div><div class="mut2">+${G.winstPct.toFixed(1).replace('.', ',')}% op wat je stortte</div>
+        <div class="row"><span>Dit jaar gestort</span><b>${euro(G.ditJaar)}</b></div>
+        <div class="row"><span>Winst dit jaar</span><b class="pos">${signed(G.winstDitJaar)}</b></div><div class="mut2">waarde ${euro(G.waardeHoger)} hoger, waarvan ${euro(G.ditJaar)} gestort</div>
+        <div class="row"><span>Verdeeld over</span><b>BUX ${euro(G.verdeeldBux)} · Saxo ${euro(G.verdeeldSaxo)}</b></div>
+        <h3 style="margin-top:14px">Netto gestort per jaar</h3>${jaren}<p class="mut2">${esc(G.uitleg)}</p></div>
+      <h2>BUX · strategie ${S.doel.join('-')}</h2><div class="tabs" id="wtabs">${tabs}</div><div class="card"><div class="mut2">Totaal ${esc(who)}</div><div class="big2">${euro(tot)}</div></div>${rows}
+      <div class="card"><div class="row"><span>Doel: ${euro(B.doelBedrag)} met BUX</span><b>${euro(tot)} · ${gp.toFixed(1).replace('.', ',')}%</b></div><div class="bar"><i style="width:${Math.max(gp, 0.5)}%"></i></div></div>
+      <h2>Saxo · tryout money</h2><div class="card"><div class="mut2">enkel Mike</div><div class="big2">${euro(B.saxo)}</div>${sx}
+        <div class="row li2"><b>Totaal Saxo</b><b>${euro(B.saxo)} · <span class="${B.saxoRes < 0 ? 'neg' : 'pos'}">${signed(B.saxoRes)} · −${Math.abs(B.saxoResPct).toFixed(1).replace('.', ',')}%</span></b></div>
+        <p class="mut2">Telt mee in het totaal van beleggen, maar niet in de percentages van ${S.doel.join('-')}. Lange horizon, dus beperkt houden.</p></div>
+      <p class="mut2">De koersen worden bijgewerkt wanneer je een nieuw gegevensbestand inlaadt (hoofdmenu → Gegevens inladen).</p>`;
+    document.getElementById('back').onclick = financieel.bind(null, 'Financieel');
+    app.querySelectorAll('#wtabs button').forEach(b => b.onclick = () => { who = b.dataset.w; beleggen(name); });
+  }
+  function schulden(name) {
+    const D = data.schulden; if (!D) { app.innerHTML = noData(name); document.getElementById('back').onclick = financieel.bind(null, 'Financieel'); return; }
+    const H = D.hypotheek, A = D.auto;
+    const delen = H.delen.map(d => `<div class="card"><div class="row"><b>${esc(d.naam)}</b><b>${euro(d.rest, 2)}</b></div>
+      <div class="mut2">nog te betalen · waarvan ${euro(d.rente, 2)} rente</div><div class="row"><span>nog ${esc(d.nog)}</span><b>${euro(d.maand, 2)} per maand</b></div>
+      <div class="mut2">Van ${euro(d.bedrag)} · ${esc(d.van)} tot ${esc(d.tot)} · ${esc(d.rentePct)} rente · al afgelost ${euro(d.afgelost, 2)}</div></div>`).join('');
+    app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>Schulden</h1><p class="mut">Nog te betalen, kapitaal plus rente.</p>
+      <div class="ok">Echte cijfers · stand van ${esc(D.stand)}</div>
+      <div class="card"><div class="mut2">Totaal nog te betalen</div><div class="huge">${euro(D.totaal, 2)}</div><div class="bar"><i style="width:${D.aflossPct}%"></i></div><div class="row mut2"><span>${D.aflossPct}% afgelost</span><span>${100 - D.aflossPct}% nog te betalen</span></div>
+        <div class="row"><span>Maandelijks aflosbedrag</span><b>${euro(D.perMaand, 2)} per maand</b></div></div>
+      <h2>Hypotheek</h2><div class="card"><div class="row"><b class="big2">${euro(H.rest, 2)}</b><b>${euro(H.perMaand, 2)} per maand</b></div><div class="mut2">voor de drie delen samen · waarvan ${euro(H.rente, 2)} rente</div></div>${delen}
+      <p class="mut2">${esc(H.noot)}</p>
+      <h2>Autolening</h2><div class="card"><div class="row"><b class="big2">${euro(A.rest, 2)}</b><b>${euro(A.maand, 2)} per maand</b></div><div class="mut2">nog ${esc(A.nog)} · waarvan ${euro(A.rente, 2)} rente</div><div class="mut2">${esc(A.noot)}</div></div>`;
+    document.getElementById('back').onclick = financieel.bind(null, 'Financieel');
+  }
+
   function home() {
     app.innerHTML = `<h1>Mijn app</h1>` + MODULES.map((m, i) => `<button class="tile" data-i="${i}"><b>${m[0]}</b><small>${m[1]}</small></button>`).join('') +
-      `<h2>Gegevens</h2><div class="card"><div class="row"><button class="ghost" id="exp">Back-up maken</button><button class="ghost" id="imp">Back-up terugzetten</button><button class="ghost" id="lock">Vergrendelen</button></div>
-      <p class="mut">Een back-up is een versleuteld bestand. Bewaar het in iCloud Drive (Bestanden-app).</p><input type="file" id="file" hidden></div>`;
+      `<h2>Gegevens</h2><div class="card"><div class="row"><button class="ghost" id="exp">Back-up maken</button><button class="ghost" id="imp">Back-up terugzetten</button><button class="ghost" id="lock">Vergrendelen</button></div><p><button class="ghost" id="load">Gegevens inladen</button></p>
+      <p class="mut">Een back-up is een versleuteld bestand. Bewaar het in iCloud Drive (Bestanden-app).</p><input type="file" id="file" hidden><input type="file" id="gfile" accept=".json" hidden></div>`;
     app.querySelectorAll('.tile').forEach(b => b.onclick = () => MODULES[b.dataset.i][2](MODULES[b.dataset.i][0]));
     document.getElementById('lock').onclick = lockScreen;
     document.getElementById('exp').onclick = () => {
       const blob = new Blob([JSON.stringify({ salt: localStorage.getItem(K_SALT), data: localStorage.getItem(K_DATA) })], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
       a.download = 'mijn-app-backup-' + new Date().toISOString().slice(0, 10) + '.json'; a.click();
+    };
+    document.getElementById('load').onclick = () => document.getElementById('gfile').click();
+    document.getElementById('gfile').onchange = async e => {
+      const f = e.target.files[0]; if (!f) return;
+      try { const o = JSON.parse(await f.text()); if (o.type !== 'mijn-app-gegevens') throw 0;
+        Object.keys(o.data).forEach(k => { data[k] = o.data[k]; }); await save(); alert('Gegevens ingeladen: ' + Object.keys(o.data).join(', ') + '.');
+      } catch (x) { alert('Dit is geen geldig gegevensbestand.'); }
     };
     document.getElementById('imp').onclick = () => document.getElementById('file').click();
     document.getElementById('file').onchange = async e => {
