@@ -220,7 +220,7 @@ if (typeof document !== 'undefined') (function () {
         <div class="row"><span>Maandelijkse inleg</span><b>${euro(x.inleg, 2)}</b></div><div class="row"><span>Fiscaal voordeel per jaar</span><b>${euro(x.voordeel)}</b></div>
         ${x.fondsen.map(f => `<div class="li2 row"><span>${esc(f.bank)} · ${esc(f.naam)}<br><span class="mut2">${f.actief ? 'Actief' : 'Inactief'}</span></span><b>${euro(f.bedrag, 2)}</b></div>`).join('')}
         <div class="mut2">${esc(x.stand)}</div>
-        <div class="row li2"><span>Aanvullend pensioen (werkgever)</span><b>${x.aanvullend == null ? '–' : euro(x.aanvullend, 2)}</b></div>
+        <div class="row li2"><span>Aanvullend pensioen (werkgever)</span><b>${x.aanvullend == null ? '–' : euro(x.aanvullend, 2)}</b></div>${x.aanvullendNoot ? `<div class="mut2">${esc(x.aanvullendNoot)}</div>` : ''}
         <div class="row" style="margin-top:8px"><span>Loopbaan ${esc(x.naam)}</span><b>${lb.nu} van ${lb.tot} jaar</b></div><div class="bar"><i style="width:${lb.pct}%"></i></div><div class="row mut2"><span>${x.start}</span><span>67 jaar · ${x.einde}</span></div></div>`;
     };
     app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>Pensioen</h1><p class="mut">Wat je opbouwt voor later.</p>
