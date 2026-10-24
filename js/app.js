@@ -208,8 +208,18 @@ if (typeof document !== 'undefined') (function () {
     app.querySelectorAll('#wtabs button').forEach(b => b.onclick = () => { who = b.dataset.w; beleggen(name); });
   }
   function loopbaan(P) {
-    const jaar = new Date().getFullYear(), tot = P.einde - P.start, nu = Math.min(Math.max(jaar - P.start, 0), tot);
-    return { nu, tot, pct: nu / tot * 100 };
+    const tot = P.einde - P.start, fr = (Date.now() - Date.UTC(P.start, 0, 1)) / (365.25 * DAYMS), nu = Math.min(Math.max(Math.floor(fr), 0), tot);
+    return { nu, tot, pct: Math.min(Math.max(fr, 0), tot) / tot * 100 };
+  }
+  function timeline(P) {
+    const lb = loopbaan(P), tot = lb.tot; let lab = '';
+    for (let y = P.start; y < P.einde - 1; y += 5) { const l = (y - P.start) / tot * 100; lab += `<span style="position:absolute;left:${l.toFixed(2)}%;transform:translateX(${y === P.start ? '0' : '-50%'});font-size:10px;color:#9FB2DE">${y}</span>`; }
+    return `<div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:14px"><span style="font-weight:600">Loopbaan ${esc(P.naam)}</span><span style="color:#B8C7EE">${lb.nu} van ${tot} jaar</span></div>
+      <div style="position:relative;height:16px;margin-top:4px">${lab}</div>
+      <div style="position:relative;height:14px;border-radius:99px;background:#1B3573;margin:0 0 4px"><div style="width:${lb.pct.toFixed(1)}%;height:100%;border-radius:99px;background:#3FA0FF"></div>
+        <div style="position:absolute;left:0;right:0;top:0;bottom:0;border-radius:99px;background-image:repeating-linear-gradient(to right,transparent 0,transparent calc(100% / ${tot} - 1px),rgba(234,240,255,0.45) calc(100% / ${tot} - 1px),rgba(234,240,255,0.45) calc(100% / ${tot}))"></div>
+        <div style="position:absolute;left:0;right:0;top:-4px;bottom:-4px;background-image:repeating-linear-gradient(to right,transparent 0,transparent calc(100% * 5 / ${tot} - 2px),#EAF0FF calc(100% * 5 / ${tot} - 2px),#EAF0FF calc(100% * 5 / ${tot}))"></div></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;margin-top:-4px"><div style="width:2px;height:14px;background:#EAF0FF"></div><div style="font-size:11px;font-weight:700;color:#EAF0FF;margin-top:2px">${P.einde}</div><div style="font-size:11px;color:#9FB2DE">Einde</div></div></div>`;
   }
   function pensioen(name) {
     const P = data.pensioen; if (!P) { app.innerHTML = noData(name); document.getElementById('back').onclick = backFin; return; }
@@ -221,7 +231,7 @@ if (typeof document !== 'undefined') (function () {
         ${x.fondsen.map(f => `<div class="li2 row"><span>${esc(f.bank)} · ${esc(f.naam)}<br><span class="mut2">${f.actief ? 'Actief' : 'Inactief'}</span></span><b>${euro(f.bedrag, 2)}</b></div>`).join('')}
         <div class="mut2">${esc(x.stand)}</div>
         <div class="row li2"><span>Aanvullend pensioen (werkgever)</span><b>${x.aanvullend == null ? '–' : euro(x.aanvullend, 2)}</b></div>${x.aanvullendNoot ? `<div class="mut2">${esc(x.aanvullendNoot)}</div>` : ''}
-        <div class="row" style="margin-top:8px"><span>Loopbaan ${esc(x.naam)}</span><b>${lb.nu} van ${lb.tot} jaar</b></div><div class="bar"><i style="width:${lb.pct}%"></i></div><div class="row mut2"><span>${x.start}</span><span>67 jaar · ${x.einde}</span></div></div>`;
+        <div style="margin-top:12px">${timeline(x)}</div></div>`;
     };
     app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>Pensioen</h1><p class="mut">Wat je opbouwt voor later.</p>
       <div class="card"><div class="mut2">Totaal pensioensparen</div><div class="huge">${euro(tot, 2)}</div><div class="row mut2"><span>Mike <b>${euro(som(P.mike), 2)}</b></span><span>Marie <b>${euro(som(P.marie), 2)}</b></span></div></div>
@@ -300,15 +310,14 @@ if (typeof document !== 'undefined') (function () {
     const n = new Date(), { todayT, nowT } = localParts(), [y, m, d] = ymd(todayT), sh = shiftOf(y, m, d);
     let nt = todayT + DAYMS, k = 0; while (shiftOf(...ymd(nt)) === 'Off' && k++ < 40) nt += DAYMS;
     const nd = new Date(nt), nsh = shiftOf(...ymd(nt)), up = upcomingMatches(nowT, todayT).find(x => x.start !== null);
-    const card = (id, t, body) => `<button class="tile dash" data-go="${id}"><div class="row"><b>${t}</b><span class="mut2">Details ›</span></div>${body}</button>`;
+    const card = (id, t, body) => `<div class="tile dash" data-go="${id}" role="button" tabindex="0"><div class="dl">${t}</div>${body}<div class="db">Details</div></div>`;
     const out = [];
     out.push(card('wk', 'Werkkalender', `<div class="mut2">Vandaag</div><div class="row"><span class="pill sh${sh}">${sh}</span></div><div class="mut2">Volgende shift: ${DN[nd.getUTCDay()]} ${nd.getUTCDate()}/${nd.getUTCMonth() + 1} (${nsh})</div>`));
     if (up) { const r = rateMatch(up); out.push(card('vb', 'Voetbal · KFC Moerbeke B', `<div class="mut2">Volgende wedstrijd</div><div class="big2">${esc(up.opp)}</div><div class="row"><span class="mut2">${DN[new Date(up.dayT).getUTCDay()]} ${up.d} ${MAANDEN[up.m]} · ${up.time} · ${up.home ? 'thuis' : 'uit'}</span>${r ? `<span class="pill ${r.lvl}">${r.lvl}${r.sh ? ' · ' + r.sh : ''}</span>` : ''}</div>`)); }
     const B = data.beleggen, I = data.inkomsten, S = data.schulden;
     if (B) out.push(card('bel', 'Beleggen', `<div class="huge">${euro(B.totaal)}</div><div class="mut2">(waarvan winst: <b>${euro(B.winst)}</b>)</div><div class="row mut2"><span>BUX <b>${euro(B.bux)}</b></span><span>Saxo <b>${euro(B.saxo)}</b></span><span>Cash <b>${euro(B.cash)}</b></span></div>`));
     if (I) { const h = I.jaren.find(j => j.jaar === I.jaar), v = I.jaren.find(j => j.jaar === I.jaar - 1); out.push(card('ink', 'Inkomsten', `<div class="huge">${euro(h.bedrag)}</div><div class="mut2">${I.jaar} tot nu toe binnen · ${Math.round(h.bedrag / v.bedrag * 100)}% van ${I.jaar - 1}</div>`)); }
-    const PE = data.pensioen; if (PE) { const t = [PE.mike, PE.marie].reduce((a, x) => a + x.fondsen.reduce((b, f) => b + f.bedrag, 0), 0), l1 = loopbaan(PE.mike), l2 = loopbaan(PE.marie);
-      out.push(card('pen', 'Pensioen', `<div class="huge">${euro(t, 2)}</div><div class="mut2">totaal pensioensparen</div><div class="row mut2"><span>Loopbaan Mike ${l1.nu} van ${l1.tot} jaar</span></div><div class="bar"><i style="width:${l1.pct}%"></i></div><div class="row mut2"><span>Loopbaan Marie ${l2.nu} van ${l2.tot} jaar</span></div><div class="bar"><i style="width:${l2.pct}%"></i></div>`)); }
+    const PE = data.pensioen; if (PE) out.push(card('pen', 'Pensioen', `<div style="display:flex;flex-direction:column;gap:16px;margin-top:12px">${timeline(PE.mike)}${timeline(PE.marie)}</div>`));
     const X = data.index; if (X) out.push(card('ix', 'Index', `<div class="huge">${X.waarde.toLocaleString('nl-BE', { minimumFractionDigits: 2 })}</div><div class="mut2">${esc(X.maand)} · nog ${(X.spil - X.waarde).toLocaleString('nl-BE', { minimumFractionDigits: 2 })} punten tot de spilindex</div>`));
     const L = data.loonbarema; if (L) out.push(card('lb', 'Loonbarema', `<div class="mut2">Categorie ${L.categorie}${String(L.anc).padStart(2, '0')}</div><div class="row"><span>Schaduwloon</span><b>${euro(L.schaduwloon, 2)}</b></div><div class="row mut2"><span>Basismaandloon <b>${euro(L.basis, 2)}</b></span><span>Shiftpremie <b>${euro(L.shiftpremie, 2)}</b></span></div>`));
     if (S) out.push(card('sch', 'Schulden', `<div class="big2">${euro(S.totaal, 2)}</div><div class="mut2">nog te betalen · ${S.aflossPct}% afgelost</div>`));
