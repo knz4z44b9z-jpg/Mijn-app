@@ -188,7 +188,7 @@ if (typeof document !== 'undefined') (function () {
     const sx = B.saxoPos.map(x => `<div class="row li2"><span>${esc(x.naam)}</span><span>${euro(x.waarde)} · <span class="${x.res < 0 ? 'neg' : 'pos'}">${signed(x.res)} · ${x.resPct < 0 ? '−' : '+'}${Math.abs(x.resPct).toFixed(1).replace('.', ',')}%</span></span></div>`).join('');
     app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>Beleggen</h1><p class="mut">Alle waarden komen uit PDT. De app rekent ze niet zelf uit.</p>
       <div class="ok">Cijfers uit PDT · koersen van ${esc(B.koersDatum)}</div>
-      <div class="card"><div class="mut2">Totaal beleggen</div><div class="huge">${euro(B.totaal)}</div><div class="mut2">(waarvan winst: <b>${euro(B.winst)}</b>)</div>
+      <div class="card"><div class="mut2">Totaal beleggen</div><div class="huge">${euro(B.totaal)}</div><div class="mut2">(waarvan winst: <b style="color:#6EE7B7">${euro(B.winst)}</b>)</div>
         <div class="row mut2"><span>BUX <b>${euro(B.bux)}</b></span><span>Saxo <b>${euro(B.saxo)}</b></span><span>Cash <b>${euro(B.cash)}</b></span></div></div>
       <div class="card"><h3>Gestort en resultaat · uit PDT</h3>
         <div class="row"><span>Netto gestort</span><b>${euro(G.netto)}</b></div><div class="mut2">${esc(G.boekingen)}</div>
@@ -315,7 +315,7 @@ if (typeof document !== 'undefined') (function () {
     out.push(card('wk', 'Werkkalender', `<div class="mut2">Vandaag</div><div class="row"><span class="pill sh${sh}">${sh}</span></div><div class="mut2">Volgende shift: ${DN[nd.getUTCDay()]} ${nd.getUTCDate()}/${nd.getUTCMonth() + 1} (${nsh})</div>`));
     if (up) { const r = rateMatch(up); out.push(card('vb', 'Voetbal · KFC Moerbeke B', `<div class="mut2">Volgende wedstrijd</div><div class="big2">${esc(up.opp)}</div><div class="row"><span class="mut2">${DN[new Date(up.dayT).getUTCDay()]} ${up.d} ${MAANDEN[up.m]} · ${up.time} · ${up.home ? 'thuis' : 'uit'}</span>${r ? `<span class="pill ${r.lvl}">${r.lvl}${r.sh ? ' · ' + r.sh : ''}</span>` : ''}</div>`)); }
     const B = data.beleggen, I = data.inkomsten, S = data.schulden;
-    if (B) out.push(card('bel', 'Beleggen', `<div class="huge">${euro(B.totaal)}</div><div class="mut2">(waarvan winst: <b>${euro(B.winst)}</b>)</div><div class="row mut2"><span>BUX <b>${euro(B.bux)}</b></span><span>Saxo <b>${euro(B.saxo)}</b></span><span>Cash <b>${euro(B.cash)}</b></span></div>`));
+    if (B) out.push(card('bel', 'Beleggen', `<div class="huge">${euro(B.totaal)}</div><div class="mut2">(waarvan winst: <b style="color:#6EE7B7">${euro(B.winst)}</b>)</div><div class="row mut2"><span>BUX <b>${euro(B.bux)}</b></span><span>Saxo <b>${euro(B.saxo)}</b></span><span>Cash <b>${euro(B.cash)}</b></span></div>`));
     if (I) { const h = I.jaren.find(j => j.jaar === I.jaar), v = I.jaren.find(j => j.jaar === I.jaar - 1); out.push(card('ink', 'Inkomsten', `<div class="huge">${euro(h.bedrag)}</div><div class="mut2">${I.jaar} tot nu toe binnen · ${Math.round(h.bedrag / v.bedrag * 100)}% van ${I.jaar - 1}</div>`)); }
     const PE = data.pensioen; if (PE) out.push(card('pen', 'Pensioen', `<div style="display:flex;flex-direction:column;gap:16px;margin-top:12px">${timeline(PE.mike)}${timeline(PE.marie)}</div>`));
     const X = data.index; if (X) out.push(card('ix', 'Index', `<div class="huge">${X.waarde.toLocaleString('nl-BE', { minimumFractionDigits: 2 })}</div><div class="mut2">${esc(X.maand)} · nog ${(X.spil - X.waarde).toLocaleString('nl-BE', { minimumFractionDigits: 2 })} punten tot de spilindex</div>`));
