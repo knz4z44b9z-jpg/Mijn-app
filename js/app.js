@@ -305,11 +305,11 @@ if (typeof document !== 'undefined') (function () {
       <article style="${art};gap:10px"><div style="${lab}">Totaal nog te betalen</div><div style="font-size:44px;font-weight:800;letter-spacing:-.03em;line-height:1;color:${R}">${euro(D.totaal, 2)}</div>${bar(D.aflossPct, 100 - D.aflossPct, D.aflossPct + '%', (100 - D.aflossPct) + '%')}<div style="display:flex;justify-content:space-between;font-size:13px;color:#B8C7EE"><span><span style="color:#34D399">●</span> ${D.aflossPct}% afgelost</span><span><span style="color:#F87171">●</span> ${100 - D.aflossPct}% nog te betalen</span></div><div style="font-size:15px;color:${LB}">Maandelijks aflosbedrag: <b style="color:${W}">${euro(D.perMaand, 2)} per maand</b></div></article>
       <article style="${art}"><div style="${lab}">Hypotheek</div><div style="font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1;color:${R}">${euro(H.rest, 2)}</div>
         <div style="font-size:14px;color:${LB}"><b style="color:${W}">${euro(H.perMaand, 2)} per maand</b> voor de drie delen samen</div><div style="font-size:14px;color:${LB}">waarvan <b style="color:${O}">${euro(H.rente, 2)}</b> rente</div>
-        ${bar(H.pct, 100 - H.pct, H.pct + '%', (100 - H.pct) + '%')}<div style="height:1px;background:#223F80"></div>${delen}
+        ${typeof H.pct === 'number' ? bar(H.pct, 100 - H.pct, H.pct + '%', (100 - H.pct) + '%') : ''}<div style="height:1px;background:#223F80"></div>${delen}
         <div style="font-size:12px;color:${MU};border-top:1px solid #223F80;padding-top:10px">${esc(H.noot)}</div></article>
       <article style="${art}"><div style="${lab}">Autolening</div><div style="font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1;color:${R}">${euro(A.rest, 2)}</div>
         <div style="font-size:14px;color:${LB}">nog ${esc(A.nog)} · <b style="color:${W}">${euro(A.maand, 2)} per maand</b></div><div style="font-size:14px;color:${LB}">waarvan <b style="color:${O}">${euro(A.rente, 2)}</b> rente</div>
-        ${bar(A.pct, 100 - A.pct, A.pct + '%', (100 - A.pct) + '%')}<div style="font-size:12px;color:${MU}">${esc(A.noot)}</div></article>`;
+        ${typeof A.pct === 'number' ? bar(A.pct, 100 - A.pct, A.pct + '%', (100 - A.pct) + '%') : ''}<div style="font-size:12px;color:${MU}">${esc(A.noot)}</div></article>`;
     document.getElementById('back').onclick = backFin;
   }
 
