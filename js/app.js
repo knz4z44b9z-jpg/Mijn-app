@@ -294,17 +294,22 @@ if (typeof document !== 'undefined') (function () {
   }
   function schulden(name) {
     const D = data.schulden; if (!D) { app.innerHTML = noData(name); document.getElementById('back').onclick = backFin; return; }
-    const H = D.hypotheek, A = D.auto;
-    const delen = H.delen.map(d => `<div class="card"><div class="row"><b>${esc(d.naam)}</b><b>${euro(d.rest, 2)}</b></div>
-      <div class="mut2">nog te betalen · waarvan ${euro(d.rente, 2)} rente</div><div class="row"><span>nog ${esc(d.nog)}</span><b>${euro(d.maand, 2)} per maand</b></div>
-      <div class="mut2">Van ${euro(d.bedrag)} · ${esc(d.van)} tot ${esc(d.tot)} · ${esc(d.rentePct)} rente · al afgelost ${euro(d.afgelost, 2)}</div></div>`).join('');
-    app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>Schulden</h1><p class="mut">Nog te betalen, kapitaal plus rente.</p>
-      <div class="ok">Echte cijfers · stand van ${esc(D.stand)}</div>
-      <div class="card"><div class="mut2">Totaal nog te betalen</div><div class="huge">${euro(D.totaal, 2)}</div><div class="bar"><i style="width:${D.aflossPct}%"></i></div><div class="row mut2"><span>${D.aflossPct}% afgelost</span><span>${100 - D.aflossPct}% nog te betalen</span></div>
-        <div class="row"><span>Maandelijks aflosbedrag</span><b>${euro(D.perMaand, 2)} per maand</b></div></div>
-      <h2>Hypotheek</h2><div class="card"><div class="row"><b class="big2">${euro(H.rest, 2)}</b><b>${euro(H.perMaand, 2)} per maand</b></div><div class="mut2">voor de drie delen samen · waarvan ${euro(H.rente, 2)} rente</div></div>${delen}
-      <p class="mut2">${esc(H.noot)}</p>
-      <h2>Autolening</h2><div class="card"><div class="row"><b class="big2">${euro(A.rest, 2)}</b><b>${euro(A.maand, 2)} per maand</b></div><div class="mut2">nog ${esc(A.nog)} · waarvan ${euro(A.rente, 2)} rente</div><div class="mut2">${esc(A.noot)}</div></div>`;
+    const H = D.hypotheek, A = D.auto, R = '#FCA5A5', O = '#FDBA74', LB = '#B8C7EE', MU = '#9FB2DE', W = '#EAF0FF';
+    const art = 'box-sizing:border-box;padding:24px;border-radius:20px;background:#11275A;border:1px solid #223F80;display:flex;flex-direction:column;gap:14px;margin-bottom:14px';
+    const lab = 'font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#9FB2DE';
+    const bar = (g, r, tg, tr) => `<div style="display:flex;height:28px;border-radius:99px;overflow:hidden;gap:2px;font-size:13px;font-weight:800;color:#04122E"><div style="width:${g}%;background:#34D399;display:flex;align-items:center;justify-content:center;white-space:nowrap">${tg}</div><div style="width:${r}%;background:#F87171;display:flex;align-items:center;justify-content:center;white-space:nowrap">${tr}</div></div>`;
+    const delen = H.delen.map(x => `<div style="display:flex;flex-direction:column;gap:4px;padding-bottom:4px"><div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;font-size:15px"><span style="font-weight:700">${esc(x.naam)}</span><span><b style="color:${R}">${euro(x.rest, 2)}</b> <span style="color:${LB}">nog te betalen · waarvan <b style="color:${O}">${euro(x.rente, 2)}</b> rente</span></span></div>
+      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px;font-size:13px;color:${LB}"><span>nog ${esc(x.nog)}</span><span><b style="color:${W}">${euro(x.maand, 2)} per maand</b></span></div>
+      <div style="font-size:12px;color:${MU}">Van ${euro(x.bedrag)} · ${esc(x.van)} tot ${esc(x.tot)} · ${esc(x.rentePct)} rente · al afgelost ${euro(x.afgelost, 2)}</div></div>`).join('');
+    app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>Schulden</h1><p class="mut">Nog te betalen, kapitaal plus rente.</p><div class="ok">Echte cijfers · stand van ${esc(D.stand)}</div>
+      <article style="${art};gap:10px"><div style="${lab}">Totaal nog te betalen</div><div style="font-size:44px;font-weight:800;letter-spacing:-.03em;line-height:1;color:${R}">${euro(D.totaal, 2)}</div>${bar(D.aflossPct, 100 - D.aflossPct, D.aflossPct + '%', (100 - D.aflossPct) + '%')}<div style="display:flex;justify-content:space-between;font-size:13px;color:#B8C7EE"><span><span style="color:#34D399">●</span> ${D.aflossPct}% afgelost</span><span><span style="color:#F87171">●</span> ${100 - D.aflossPct}% nog te betalen</span></div><div style="font-size:15px;color:${LB}">Maandelijks aflosbedrag: <b style="color:${W}">${euro(D.perMaand, 2)} per maand</b></div></article>
+      <article style="${art}"><div style="${lab}">Hypotheek</div><div style="font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1;color:${R}">${euro(H.rest, 2)}</div>
+        <div style="font-size:14px;color:${LB}"><b style="color:${W}">${euro(H.perMaand, 2)} per maand</b> voor de drie delen samen</div><div style="font-size:14px;color:${LB}">waarvan <b style="color:${O}">${euro(H.rente, 2)}</b> rente</div>
+        ${bar(H.pct, 100 - H.pct, H.pct + '%', (100 - H.pct) + '%')}<div style="height:1px;background:#223F80"></div>${delen}
+        <div style="font-size:12px;color:${MU};border-top:1px solid #223F80;padding-top:10px">${esc(H.noot)}</div></article>
+      <article style="${art}"><div style="${lab}">Autolening</div><div style="font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1;color:${R}">${euro(A.rest, 2)}</div>
+        <div style="font-size:14px;color:${LB}">nog ${esc(A.nog)} · <b style="color:${W}">${euro(A.maand, 2)} per maand</b></div><div style="font-size:14px;color:${LB}">waarvan <b style="color:${O}">${euro(A.rente, 2)}</b> rente</div>
+        ${bar(A.pct, 100 - A.pct, A.pct + '%', (100 - A.pct) + '%')}<div style="font-size:12px;color:${MU}">${esc(A.noot)}</div></article>`;
     document.getElementById('back').onclick = backFin;
   }
 
@@ -322,7 +327,7 @@ if (typeof document !== 'undefined') (function () {
     const PE = data.pensioen; if (PE) out.push(card('pen', 'Pensioen', `<div style="display:flex;flex-direction:column;gap:16px;margin-top:12px">${timeline(PE.mike)}${timeline(PE.marie)}</div>`));
     const X = data.index; if (X) out.push(card('ix', 'Index', `<div class="huge">${X.waarde.toLocaleString('nl-BE', { minimumFractionDigits: 2 })}</div><div class="mut2">${esc(X.maand)} · nog ${(X.spil - X.waarde).toLocaleString('nl-BE', { minimumFractionDigits: 2 })} punten tot de spilindex</div>`));
     const L = data.loonbarema; if (L) out.push(card('lb', 'Loonbarema', `<div style="font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1;margin-top:6px">Categorie ${L.categorie}${String(L.anc).padStart(2, '0')}</div><div style="display:flex;justify-content:space-between;gap:12px;font-size:15px;margin-top:6px"><span style="font-weight:600">Schaduwloon</span><span style="color:#B8C7EE">${euro(L.schaduwloon, 2)}</span></div><div style="display:flex;justify-content:space-between;gap:12px;font-size:15px"><span style="font-weight:600;color:#6EE7B7">Basismaandloon</span><span style="font-weight:700;color:#6EE7B7">${euro(L.basis, 2)}</span></div><div style="display:flex;justify-content:space-between;gap:12px;font-size:15px"><span style="font-weight:600;color:#6EE7B7">Shiftpremie</span><span style="font-weight:700;color:#6EE7B7">${euro(L.shiftpremie, 2)}</span></div>`));
-    if (S) out.push(card('sch', 'Schulden', `<div class="big2">${euro(S.totaal, 2)}</div><div class="mut2">nog te betalen · ${S.aflossPct}% afgelost</div>`));
+    if (S) out.push(card('sch', 'Schulden', `<div style="font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1;margin-top:8px">${euro(S.totaal, 2)} <span style="font-size:15px;font-weight:600;color:#9FB2DE">nog te betalen</span></div>`));
     if (!B) out.push(`<div class="card mut2">Laad je gegevensbestand in (hieronder bij Gegevens) om je cijfers op het dashboard te zien.</div>`);
     return out.join('');
   }
