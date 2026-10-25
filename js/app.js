@@ -104,6 +104,7 @@ if (typeof document !== 'undefined') (function () {
 
   /* ----- Vergrendelscherm ----- */
   function lockScreen() {
+    const nv = document.getElementById('nav'); if (nv) nv.style.display = 'none';
     key = null; data = null;
     const first = !localStorage.getItem(K_SALT);
     app.innerHTML = `<h1>Mijn app</h1><div class="card">
@@ -318,26 +319,45 @@ if (typeof document !== 'undefined') (function () {
     let nt = todayT + DAYMS, k = 0; while (shiftOf(...ymd(nt)) === 'Off' && k++ < 40) nt += DAYMS;
     const nd = new Date(nt), nsh = shiftOf(...ymd(nt)), up = upcomingMatches(nowT, todayT).find(x => x.start !== null);
     const card = (id, t, body) => `<div class="tile dash" data-go="${id}" role="button" tabindex="0"><div class="dl">${t}</div>${body}<div class="db">Details</div></div>`;
-    const out = [];
-    out.push(card('wk', 'Werkkalender', `<div class="mut2">Vandaag</div><div class="row"><span class="pill sh${sh}">${sh}</span></div><div class="mut2">Volgende shift: ${DN[nd.getUTCDay()]} ${nd.getUTCDate()}/${nd.getUTCMonth() + 1} (${nsh})</div>`));
-    if (up) { const r = rateMatch(up); out.push(card('vb', 'Voetbal · KFC Moerbeke B', `<div class="mut2">Volgende wedstrijd</div><div class="big2">${esc(up.opp)}</div><div class="row"><span class="mut2">${DN[new Date(up.dayT).getUTCDay()]} ${up.d} ${MAANDEN[up.m]} · ${up.time} · ${up.home ? 'thuis' : 'uit'}</span>${r ? `<span class="pill ${r.lvl}">${r.lvl}${r.sh ? ' · ' + r.sh : ''}</span>` : ''}</div>`)); }
+    const T = {};
+    T.wk = (card('wk', 'Werkkalender', `<div class="mut2">Vandaag</div><div class="row"><span class="pill sh${sh}">${sh}</span></div><div class="mut2">Volgende shift: ${DN[nd.getUTCDay()]} ${nd.getUTCDate()}/${nd.getUTCMonth() + 1} (${nsh})</div>`));
+    if (up) { const MN = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']; T.vb = (card('vb', 'Voetbal · KFC Moerbeke B', `<div style="font-size:13px;color:#B8C7EE">Volgende wedstrijd</div><div style="font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.1">${esc(up.opp)}</div><div style="font-size:14px;color:#D5E0FA">${DN[new Date(up.dayT).getUTCDay()]} ${up.d} ${MN[up.m]} · ${up.time} · ${up.home ? 'thuis' : 'uit'}</div>`)); }
     const B = data.beleggen, I = data.inkomsten, S = data.schulden;
-    if (B) out.push(card('bel', 'Beleggen', `<div class="huge">${euro(B.totaal)}</div><div class="mut2">(waarvan winst: <b style="color:#6EE7B7">${euro(B.winst)}</b>)</div><div class="row mut2"><span>BUX <b>${euro(B.bux)}</b></span><span>Saxo <b>${euro(B.saxo)}</b></span><span>Cash <b>${euro(B.cash)}</b></span></div>`));
-    if (I) { const h = I.jaren.find(j => j.jaar === I.jaar), v = I.jaren.find(j => j.jaar === I.jaar - 1), pc = Math.round(h.bedrag / v.bedrag * 100); out.push(card('ink', 'Inkomsten', `<div style="font-size:16px;font-weight:700;color:#B8C7EE;margin-top:8px">${I.jaar}</div><div style="font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1">${euro(h.bedrag)}</div><div style="display:flex;justify-content:space-between;font-size:13px;color:#B8C7EE;margin-top:8px"><span>tot nu toe binnen</span><span>${I.jaar - 1}: ${euro(v.bedrag)}</span></div><div style="height:28px;border-radius:99px;background:#1B3573;overflow:hidden;margin-top:6px"><div style="width:${Math.min(pc, 100)}%;height:100%;background:#34D399;display:flex;align-items:center;padding-left:12px;font-size:13px;font-weight:700;color:#06281C;white-space:nowrap">${pc}% van ${I.jaar - 1}</div></div>`)); }
-    const PE = data.pensioen; if (PE) out.push(card('pen', 'Pensioen', `<div style="display:flex;flex-direction:column;gap:16px;margin-top:12px">${timeline(PE.mike)}${timeline(PE.marie)}</div>`));
-    const X = data.index; if (X) out.push(card('ix', 'Index', `<div class="huge">${X.waarde.toLocaleString('nl-BE', { minimumFractionDigits: 2 })}</div><div class="mut2">${esc(X.maand)} · nog ${(X.spil - X.waarde).toLocaleString('nl-BE', { minimumFractionDigits: 2 })} punten tot de spilindex</div>`));
-    const L = data.loonbarema; if (L) out.push(card('lb', 'Loonbarema', `<div style="font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1;margin-top:6px">Categorie ${L.categorie}${String(L.anc).padStart(2, '0')}</div><div style="display:flex;justify-content:space-between;gap:12px;font-size:15px;margin-top:6px"><span style="font-weight:600">Schaduwloon</span><span style="color:#B8C7EE">${euro(L.schaduwloon, 2)}</span></div><div style="display:flex;justify-content:space-between;gap:12px;font-size:15px"><span style="font-weight:600;color:#6EE7B7">Basismaandloon</span><span style="font-weight:700;color:#6EE7B7">${euro(L.basis, 2)}</span></div><div style="display:flex;justify-content:space-between;gap:12px;font-size:15px"><span style="font-weight:600;color:#6EE7B7">Shiftpremie</span><span style="font-weight:700;color:#6EE7B7">${euro(L.shiftpremie, 2)}</span></div>`));
-    if (S) out.push(card('sch', 'Schulden', `<div style="font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1;margin-top:8px">${euro(S.totaal, 2)} <span style="font-size:15px;font-weight:600;color:#9FB2DE">nog te betalen</span></div>`));
-    if (!B) out.push(`<div class="card mut2">Laad je gegevensbestand in (hieronder bij Gegevens) om je cijfers op het dashboard te zien.</div>`);
-    return out.join('');
+    if (B) T.bel = (card('bel', 'Beleggen', `<div class="huge">${euro(B.totaal)}</div><div class="mut2">(waarvan winst: <b style="color:#6EE7B7">${euro(B.winst)}</b>)</div><div class="row mut2"><span>BUX <b>${euro(B.bux)}</b></span><span>Saxo <b>${euro(B.saxo)}</b></span><span>Cash <b>${euro(B.cash)}</b></span></div>`));
+    if (I) { const h = I.jaren.find(j => j.jaar === I.jaar), v = I.jaren.find(j => j.jaar === I.jaar - 1), pc = Math.round(h.bedrag / v.bedrag * 100); T.ink = (card('ink', 'Inkomsten', `<div style="font-size:16px;font-weight:700;color:#B8C7EE;margin-top:8px">${I.jaar}</div><div style="font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1">${euro(h.bedrag)}</div><div style="display:flex;justify-content:space-between;font-size:13px;color:#B8C7EE;margin-top:8px"><span>tot nu toe binnen</span><span>${I.jaar - 1}: ${euro(v.bedrag)}</span></div><div style="height:28px;border-radius:99px;background:#1B3573;overflow:hidden;margin-top:6px"><div style="width:${Math.min(pc, 100)}%;height:100%;background:#34D399;display:flex;align-items:center;padding-left:12px;font-size:13px;font-weight:700;color:#06281C;white-space:nowrap">${pc}% van ${I.jaar - 1}</div></div>`)); }
+    const PE = data.pensioen; if (PE) T.pen = (card('pen', 'Pensioen', `<div style="display:flex;flex-direction:column;gap:16px;margin-top:12px">${timeline(PE.mike)}${timeline(PE.marie)}</div>`));
+    const X = data.index; if (X) T.ix = (card('ix', 'Index', `<div class="huge">${X.waarde.toLocaleString('nl-BE', { minimumFractionDigits: 2 })}</div><div class="mut2">${esc(X.maand)} · nog ${(X.spil - X.waarde).toLocaleString('nl-BE', { minimumFractionDigits: 2 })} punten tot de spilindex</div>`));
+    const L = data.loonbarema; if (L) T.lb = (card('lb', 'Loonbarema', `<div style="font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1;margin-top:6px">Categorie ${L.categorie}${String(L.anc).padStart(2, '0')}</div><div style="display:flex;justify-content:space-between;gap:12px;font-size:15px;margin-top:6px"><span style="font-weight:600">Schaduwloon</span><span style="color:#B8C7EE">${euro(L.schaduwloon, 2)}</span></div><div style="display:flex;justify-content:space-between;gap:12px;font-size:15px"><span style="font-weight:600;color:#6EE7B7">Basismaandloon</span><span style="font-weight:700;color:#6EE7B7">${euro(L.basis, 2)}</span></div><div style="display:flex;justify-content:space-between;gap:12px;font-size:15px"><span style="font-weight:600;color:#6EE7B7">Shiftpremie</span><span style="font-weight:700;color:#6EE7B7">${euro(L.shiftpremie, 2)}</span></div>`));
+    if (S) T.sch = (card('sch', 'Schulden', `<div style="font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1;margin-top:8px">${euro(S.totaal, 2)} <span style="font-size:15px;font-weight:600;color:#9FB2DE">nog te betalen</span></div>`));
+    const order = ['ink', 'bel', 'sch', 'pen', 'vb', 'wk', 'lb'], res = order.filter(k => T[k]).map(k => T[k]);
+    if (!B) res.unshift(`<div class="card mut2">Laad je gegevensbestand in (Meer → Gegevens inladen) om je cijfers op het dashboard te zien.</div>`);
+    return res.join('');
   }
   function home() {
-    app.innerHTML = `<h1>Dashboard</h1>` + dashboard() + `<h2>Modules</h2>` + MODULES.map((m, i) => `<button class="tile" data-i="${i}"><b>${m[0]}</b><small>${m[1]}</small></button>`).join('') +
+    curTab = 'home'; renderNav();
+    app.innerHTML = `<h1>Dashboard</h1>` + dashboard();
+    const GO = { wk: () => werkkalender(), vb: () => voetbal('Voetbal'), bel: () => beleggen('Beleggen'), ink: () => inkomsten('Inkomsten'), sch: () => schulden('Schulden'), pen: () => pensioen('Pensioen'), ix: () => indexScherm('Index'), lb: () => loonbarema('Loonbarema') };
+    app.querySelectorAll('.tile[data-go]').forEach(b => b.onclick = () => { fromDash = true; GO[b.dataset.go](); });
+  }
+  function boekingen() {
+    curTab = 'boek'; renderNav();
+    app.innerHTML = `<h1>Boekingen</h1><div class="card mut2">De boekingen uit PDT komen in een volgende versie.</div>`;
+  }
+  let curTab = 'home';
+  function renderNav() {
+    let n = document.getElementById('nav');
+    if (!n) { n = document.createElement('nav'); n.id = 'nav'; document.body.appendChild(n); }
+    const it = (k, l, svg) => `<button data-k="${k}" class="${curTab === k ? 'on' : ''}" ${k === 'home' ? 'aria-label="Home"' : ''}>${svg || l}</button>`;
+    n.innerHTML = it('home', '', '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-6h4v6"/></svg>') + it('boek', 'Boekingen') + it('bel', 'Beleggen') + it('meer', 'Meer');
+    n.style.display = 'flex';
+    n.querySelectorAll('button').forEach(b => b.onclick = () => { const k = b.dataset.k; if (k === 'home') home(); else if (k === 'boek') boekingen(); else if (k === 'bel') { fromDash = true; curTab = 'bel'; renderNav(); beleggen('Beleggen'); } else meer(); });
+  }
+  function meer() {
+    curTab = 'meer'; renderNav();
+    app.innerHTML = `<h1>Meer</h1>` + `<h2>Modules</h2>` + MODULES.map((m, i) => `<button class="tile" data-i="${i}"><b>${m[0]}</b><small>${m[1]}</small></button>`).join('') +
       `<h2>Gegevens</h2><div class="card"><div class="row"><button class="ghost" id="exp">Back-up maken</button><button class="ghost" id="imp">Back-up terugzetten</button><button class="ghost" id="lock">Vergrendelen</button></div><p><button class="ghost" id="load">Gegevens inladen</button></p>
       <p class="mut">Een back-up is een versleuteld bestand. Bewaar het in iCloud Drive (Bestanden-app).</p><input type="file" id="file" hidden><input type="file" id="gfile" accept=".json" hidden></div>`;
     app.querySelectorAll('.tile[data-i]').forEach(b => b.onclick = () => MODULES[b.dataset.i][2](MODULES[b.dataset.i][0]));
-    const GO = { wk: () => werkkalender(), vb: () => voetbal('Voetbal'), bel: () => beleggen('Beleggen'), ink: () => inkomsten('Inkomsten'), sch: () => schulden('Schulden'), pen: () => pensioen('Pensioen'), ix: () => indexScherm('Index'), lb: () => loonbarema('Loonbarema') };
-    app.querySelectorAll('.tile[data-go]').forEach(b => b.onclick = () => { fromDash = true; GO[b.dataset.go](); });
     document.getElementById('lock').onclick = lockScreen;
     document.getElementById('exp').onclick = () => {
       const blob = new Blob([JSON.stringify({ salt: localStorage.getItem(K_SALT), data: localStorage.getItem(K_DATA) })], { type: 'application/json' });
