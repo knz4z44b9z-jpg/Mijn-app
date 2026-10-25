@@ -127,7 +127,7 @@ if (typeof document !== 'undefined') (function () {
           data = await open(localStorage.getItem(K_DATA));
         }
         home();
-      } catch (e) { key = null; err.textContent = 'Verkeerde code.'; }
+      } catch (e) { console.error(e); key = null; err.textContent = 'Verkeerde code.'; }
     };
     document.getElementById('go').onclick = go;
     document.getElementById('code').onkeydown = e => { if (e.key === 'Enter' && !first) go(); };
@@ -157,7 +157,9 @@ if (typeof document !== 'undefined') (function () {
   const noData = name => `<p><button class="ghost" id="back">← Terug</button></p><h1>${esc(name)}</h1><div class="card">Nog geen gegevens. Laad je gegevensbestand in via het hoofdmenu → <b>Gegevens inladen</b>.</div>`;
   function financieel(name) {
     app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>${esc(name)}</h1>
+      <button class="tile" id="f-lf"><b>Leefbudget</b><small>Wat je nog kunt besteden in deze periode</small></button>
       <button class="tile" id="f-bel"><b>Beleggen</b><small>BUX, Saxo, gestort en resultaat</small></button>
+      <button class="tile" id="f-spp"><b>Spaarplan</b><small>Gepland tegenover gestort</small></button>
       <button class="tile" id="f-ink"><b>Inkomsten</b><small>Wat er binnenkomt, per maand en per jaar</small></button>
       <button class="tile" id="f-lb"><b>Loonbarema</b><small>Je categorie en de weddetabel</small></button>
       <button class="tile" id="f-idx"><b>Index</b><small>Gezondheidsindex en spilindex</small></button>
@@ -165,8 +167,10 @@ if (typeof document !== 'undefined') (function () {
       <button class="tile" id="f-sch"><b>Schulden</b><small>Hypotheek en autolening</small></button>
       <p class="mut">Leefbudget, Inkomsten, Spaarplan, Pensioen, Loonbarema, Index en Vermogen volgen.</p>`;
     document.getElementById('back').onclick = home;
+    document.getElementById('f-lf').onclick = () => { fromDash = false; leefbudget('Leefbudget'); };
     document.getElementById('f-bel').onclick = () => { fromDash = false; beleggen('Beleggen'); };
     document.getElementById('f-sch').onclick = () => { fromDash = false; schulden('Schulden'); };
+    document.getElementById('f-spp').onclick = () => { fromDash = false; spaarplan('Spaarplan'); };
     document.getElementById('f-ink').onclick = () => { fromDash = false; inkomsten('Inkomsten'); };
     document.getElementById('f-idx').onclick = () => { fromDash = false; indexScherm('Index'); };
     document.getElementById('f-pen').onclick = () => { fromDash = false; pensioen('Pensioen'); };
@@ -272,6 +276,45 @@ if (typeof document !== 'undefined') (function () {
       <div class="tw"><table>${kop}${body}</table></div>`;
     document.getElementById('back').onclick = backFin;
   }
+  const MND = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+  function leefCalc(Lf) {
+    const I = Lf.inkomsten, V = Lf.vast, S = Lf.sparen, ink = I.loonMike + I.loonMarie + I.kindergeld, vast = V.hypotheek + V.auto + V.creche,
+      spar = S.vaste + S.toekomstige + S.pensioenMike + S.pensioenMarie + S.beleggen, rest = ink - vast - spar - (Lf.aanzuivering || 0),
+      L = Math.max(Math.min(Lf.doel, rest), 0), B = Math.max(rest - Lf.doel, 0), U = Lf.uitgegeven, nog = L - U, bufLeft = Math.max(B - Math.max(U - L, 0), 0);
+    const st = new Date(Lf.start + 'T00:00:00'), en = new Date(Lf.einde + 'T00:00:00'), t = new Date(); t.setHours(0, 0, 0, 0);
+    const dagen = Math.max(Math.round((en - t) / DAYMS) + 1, 0), fmtD = x => x.getDate() + ' ' + MND[x.getMonth()];
+    return { ink, vast, spar, rest, L, B, U, nog, bufLeft, dagen, periode: fmtD(st) + ' – ' + fmtD(en), besteedPct: L > 0 ? Math.min(U / L * 100, 100) : 100 };
+  }
+  function leefbudget(name) {
+    const Lf = data.leefbudget; if (!Lf) { app.innerHTML = noData(name); document.getElementById('back').onclick = backFin; return; }
+    const c = leefCalc(Lf), I = Lf.inkomsten, V = Lf.vast, S = Lf.sparen, e = x => euro(x, Math.abs(x % 1) > 0.004 ? 2 : 0);
+    const row = (a, b, st) => `<div style="display:flex;justify-content:space-between;gap:12px;${st || 'color:#EAF0FF'}"><span>${a}</span><span>${b}</span></div>`;
+    const chip = (t, bg, bd) => `<div style="align-self:flex-start;padding:5px 12px;border-radius:8px;background:${bg};border:1px solid ${bd};font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">${t}</div>`;
+    const hr = '<div style="height:1px;background:#223F80"></div>', art = 'padding:24px;border-radius:20px;background:#11275A;border:1px solid #223F80;margin-bottom:14px';
+    const mini = (t, v) => `<div style="${art};margin:0"><div class="dl">${t}</div><div style="margin-top:10px;font-size:28px;font-weight:800">${v}</div></div>`;
+    const bar = (pct, col) => `<div style="height:10px;border-radius:99px;background:#1B3573"><div style="width:${Math.min(pct, 100).toFixed(0)}%;height:100%;border-radius:99px;background:${col}"></div></div>`;
+    const uitg = c.vast + c.U, uitgPlan = c.vast + c.L, over = c.nog < 0;
+    app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>Leefbudget</h1><p class="mut">${c.periode} · nog ${c.dagen} dag${c.dagen === 1 ? '' : 'en'} tot het volgende loon</p>
+      <div class="ok">Echte cijfers · stand van ${new Date().getDate()} ${MND[new Date().getMonth()]}</div>
+      <article style="${art};display:flex;flex-direction:column;gap:14px"><div class="dl" style="font-size:13px">Hoe dit bedrag tot stand komt</div>
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:15px">${chip('Inkomsten', '#14532D', '#1E7A43')}
+        ${row('Loon Mike', e(I.loonMike))}${row('Loon Marie', e(I.loonMarie))}${row('waarvan RVA-bijpassing', e(I.rva), 'padding-left:18px;font-size:14px;color:#B8C7EE')}${row('Kindergeld', e(I.kindergeld))}${row('Totaal inkomsten', '<b>' + e(c.ink) + '</b>')}${hr}
+        ${chip('Grote vaste kosten', '#7F1D1D', '#A32A2A')}${row('Hypotheek', '− ' + e(V.hypotheek))}${row('Autolening', '− ' + e(V.auto))}${row('Crèche', '− ' + e(V.creche))}${row('Totaal vaste kosten', '<b>− ' + e(c.vast) + '</b>')}${hr}
+        ${chip('Sparen', '#1E3A8A', '#2F55B8')}${row('Vaste spaarrekening', '− ' + e(S.vaste), 'color:#B8C7EE')}${row('Toekomstige spaarrekening', '− ' + e(S.toekomstige), 'color:#B8C7EE')}${row('Pensioensparen Mike', '− ' + e(S.pensioenMike), 'color:#B8C7EE')}${row('Pensioensparen Marie', '− ' + e(S.pensioenMarie), 'color:#B8C7EE')}${row('Beleggen', '− ' + e(S.beleggen), 'color:#B8C7EE')}${Lf.aanzuivering ? row('Aanvullen spaarrekening', '− ' + e(Lf.aanzuivering), 'color:#B8C7EE') : ''}${row('Totaal sparen', '<b>− ' + e(c.spar + (Lf.aanzuivering || 0)) + '</b>')}${hr}
+        <div style="display:flex;justify-content:space-between"><span style="font-weight:700">Leefbudget</span><b>${e(c.L)}</b></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:20px;font-weight:800;color:#FCA5A5"><span>Al uitgegeven</span><span>${e(c.U)}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:20px;font-weight:800;color:${over ? '#FCA5A5' : '#6EE7B7'}"><span>Nog te besteden</span><span>${over ? '− ' + e(-c.nog) : e(c.nog)}</span></div>
+        ${!over && c.dagen > 0 ? `<div style="text-align:right;font-size:13px;color:#B8C7EE;margin-top:-6px">± ${e(c.nog / c.dagen)} per dag</div>` : ''}
+        ${over ? `<div style="text-align:right;font-size:13px;color:#FCD34D;margin-top:-6px">Boven je leefbudget: je buffer wordt aangesproken</div>` : ''}${hr}
+        <div style="display:flex;justify-content:space-between"><span style="font-weight:700">Buffer</span><b>${e(c.bufLeft)}</b></div></div></article>
+      <article style="${art};display:flex;flex-direction:column;gap:18px"><div class="dl" style="font-size:13px">Maandelijkse balans</div>
+        <div><div style="display:flex;justify-content:space-between;font-size:15px;margin-bottom:8px"><span style="font-weight:600">Inkomsten</span><span style="color:#6EE7B7">${e(c.ink)} / ${e(c.ink)} · binnen</span></div>${bar(100, '#34D399')}</div>
+        <div><div style="display:flex;justify-content:space-between;font-size:15px;margin-bottom:8px"><span style="font-weight:600">Uitgaven</span><span style="color:#B8C7EE">${e(uitg)} / ${e(uitgPlan)}</span></div>${bar(uitgPlan > 0 ? uitg / uitgPlan * 100 : 100, '#F87171')}</div>
+        ${hr}<div style="display:flex;justify-content:flex-end;align-items:baseline"><span style="color:#FDBA74;font-weight:800;font-size:20px">${c.ink - uitg < 0 ? '− ' : '+ '}${e(Math.abs(c.ink - uitg))} <span style="font-size:13px;font-weight:600;color:${c.ink - uitg < 0 ? '#FCA5A5' : '#6EE7B7'}">${c.ink - uitg < 0 ? 'negatief' : 'positief'}</span></span></div></article>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">${mini('Maaltijdcheques', Lf.maaltijdcheques ? e(Lf.maaltijdcheques) : '–')}${mini('Buffer', e(c.bufLeft))}${mini('Beleggen', e(S.beleggen))}${mini('Pensioensparen', e(S.pensioenMike + S.pensioenMarie))}${mini('Spaarrekening', e(S.vaste + S.toekomstige))}</div>
+      <p class="mut2">Leefbudget = inkomsten − grote vaste kosten − sparen, met een maximum van ${e(Lf.doel)}. Wat daarboven overblijft, is je buffer. Maaltijdcheques komen er als surplus bovenop.</p>`;
+    document.getElementById('back').onclick = backFin;
+  }
   let inkTab = 'jaar';
   function inkomsten(name) {
     const I = data.inkomsten; if (!I) { app.innerHTML = noData(name); document.getElementById('back').onclick = backFin; return; }
@@ -292,6 +335,30 @@ if (typeof document !== 'undefined') (function () {
       ${inkTab === 'maand' ? maanden : jaren + `<p class="mut2">${esc(I.noot)}</p>`}`;
     document.getElementById('back').onclick = backFin;
     app.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { inkTab = b.dataset.t; inkomsten(name); });
+  }
+  const MAAND3 = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+  function spTile(S) {
+    const m = S.huidigeMaand, g = S.regels, now = g.spaarrekeningen.gestort + g.beleggen.gestort + g.pensioen.gestort, jaarG = S.gestort.reduce((a, x) => a + (x.bedrag || 0), 0), jaarP = S.maandPlan * 12;
+    const ex = S.extras, exT = ex.reduce((a, x) => a + x.bedrag, 0), exB = ex.filter(x => x.binnen).length;
+    const blok = (lab, big, small, pct, col, labcol) => `<div style="display:flex;flex-direction:column;gap:10px;margin-top:14px"><div style="font-size:13px;color:${labcol || '#B8C7EE'}">${lab}</div><div style="font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1">${big} <span style="font-size:16px;font-weight:600;color:#9FB2DE">${small}</span></div><div style="height:12px;border-radius:99px;background:#1B3573"><div style="width:${Math.max(Math.min(pct, 100), 0)}%;height:100%;border-radius:99px;background:${col}"></div></div></div>`;
+    return `<div class="dl">Spaarplan</div>${blok('Maandelijks', euro(now), 'van ' + euro(S.maandPlan), now / S.maandPlan * 100, '#3FA0FF')}${blok('Jaarlijks', euro(jaarG), 'van ' + euro(jaarP), jaarG / jaarP * 100, '#3FA0FF')}${blok("Extra's", euro(exT), `${exB} van ${ex.length} binnen`, exB / ex.length * 100, '#FDBA74', '#FDBA74')}`;
+  }
+  function spaarplan(name) {
+    const S = data.spaarplan; if (!S) { app.innerHTML = noData(name); document.getElementById('back').onclick = backFin; return; }
+    const g = S.regels, now = g.spaarrekeningen.gestort + g.beleggen.gestort + g.pensioen.gestort, jaarG = S.gestort.reduce((a, x) => a + (x.bedrag || 0), 0), jaarP = S.maandPlan * 12;
+    const ex = S.extras, exT = ex.reduce((a, x) => a + x.bedrag, 0), exB = ex.filter(x => x.binnen).length;
+    const lijn = (l, o) => `<div class="row li2"><span>${l}</span><b>${euro(o.gestort)} / ${euro(o.plan)}</b></div>`;
+    const maanden = S.gestort.map((x, i) => {
+      const st = i < S.huidigeMaand ? (x.bedrag >= S.maandPlan ? ['Gelukt', 'Kan'] : ['Niet gelukt', 'Botst']) : i === S.huidigeMaand ? ['Lopend', 'Krap'] : ['Nog te komen', ''];
+      const exs = ex.filter(e => e.maand === x.maand).map(e => `<div class="mut2">+ Extra: ${esc(e.naam)} · ${euro(e.bedrag)} · ${e.binnen ? 'binnen' : 'nog te komen'}</div>`).join('');
+      return `<div class="card"><div class="row"><b>${x.maand}</b>${st[1] ? `<span class="pill ${st[1]}">${st[0]}</span>` : `<span class="mut2">${st[0]}</span>`}</div><div class="row"><span>${x.bedrag == null ? '–' : (x.bedrag < 0 ? '− ' : '') + euro(Math.abs(x.bedrag), 2)} / ${euro(S.maandPlan)}</span></div>${exs}</div>`;
+    }).join('');
+    app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>Spaarplan</h1><p class="mut">Gepland tegenover gestort.</p>
+      <div class="card">${spTile(S)}</div>
+      <div class="card"><h3>Deze periode</h3>${lijn('Spaarrekeningen (vaste + toekomstige uitgaven)', g.spaarrekeningen)}${lijn('Beleggen (BUX)', g.beleggen)}${lijn('Pensioensparen', g.pensioen)}<p class="mut2">De twee spaarrekeningen staan in je Excel samen. Het negatieve bedrag is wat je tijdelijk hebt opgenomen.</p></div>
+      <h2>Per maand</h2>${maanden}
+      <p class="mut2">De bedragen bij de Extra's zijn schattingen.</p>`;
+    document.getElementById('back').onclick = backFin;
   }
   function schulden(name) {
     const D = data.schulden; if (!D) { app.innerHTML = noData(name); document.getElementById('back').onclick = backFin; return; }
@@ -325,18 +392,24 @@ if (typeof document !== 'undefined') (function () {
     const B = data.beleggen, I = data.inkomsten, S = data.schulden;
     if (B) T.bel = (card('bel', 'Beleggen', `<div class="huge">${euro(B.totaal)}</div><div class="mut2">(waarvan winst: <b style="color:#6EE7B7">${euro(B.winst)}</b>)</div><div class="row mut2"><span>BUX <b>${euro(B.bux)}</b></span><span>Saxo <b>${euro(B.saxo)}</b></span><span>Cash <b>${euro(B.cash)}</b></span></div>`));
     if (I) { const h = I.jaren.find(j => j.jaar === I.jaar), v = I.jaren.find(j => j.jaar === I.jaar - 1), pc = Math.round(h.bedrag / v.bedrag * 100); T.ink = (card('ink', 'Inkomsten', `<div style="font-size:16px;font-weight:700;color:#B8C7EE;margin-top:8px">${I.jaar}</div><div style="font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1">${euro(h.bedrag)}</div><div style="display:flex;justify-content:space-between;font-size:13px;color:#B8C7EE;margin-top:8px"><span>tot nu toe binnen</span><span>${I.jaar - 1}: ${euro(v.bedrag)}</span></div><div style="height:28px;border-radius:99px;background:#1B3573;overflow:hidden;margin-top:6px"><div style="width:${Math.min(pc, 100)}%;height:100%;background:#34D399;display:flex;align-items:center;padding-left:12px;font-size:13px;font-weight:700;color:#06281C;white-space:nowrap">${pc}% van ${I.jaar - 1}</div></div>`)); }
+    const LF = data.leefbudget; if (LF) { const c = leefCalc(LF), e = x => euro(x, Math.abs(x % 1) > 0.004 ? 2 : 0), pc = Math.round(c.besteedPct), bp = c.B > 0 ? Math.round(c.bufLeft / c.B * 100) : 0;
+      T.lf = (card('lf', 'Leefbudget', `<div style="display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;margin-top:-18px"><span></span><span style="font-size:14px;font-weight:600;color:#D5E0FA">${c.periode}</span></div><div><div style="font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1">${e(c.L)}</div><div style="margin-top:8px;font-size:15px;color:#B8C7EE">beginbudget van deze periode</div></div>
+      <div style="display:flex;height:28px;border-radius:99px;overflow:hidden;gap:2px;font-size:13px;font-weight:800;color:#04122E"><div style="width:${pc}%;background:#F87171;display:flex;align-items:center;justify-content:center">${pc}%</div>${pc < 100 ? `<div style="width:${100 - pc}%;background:#34D399;display:flex;align-items:center;justify-content:center">${100 - pc}%</div>` : ''}</div>
+      <div style="display:flex;justify-content:space-between;gap:12px"><div><div style="font-size:13px;color:#B8C7EE">Reeds besteed</div><div style="margin-top:4px;font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1;color:#FCA5A5">${e(c.U)}</div></div><div style="text-align:right"><div style="font-size:13px;color:#B8C7EE">Nog te besteden</div><div style="margin-top:4px;font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1;color:${c.nog < 0 ? '#FCA5A5' : '#6EE7B7'}">${c.nog < 0 ? '− ' + e(-c.nog) : e(c.nog)}</div></div></div>
+      <div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:#B8C7EE;margin-bottom:8px"><span>Buffer</span><span style="color:#D5E0FA;font-weight:600">${e(c.bufLeft)}</span></div><div style="height:28px;border-radius:99px;background:#1B3573;overflow:hidden"><div style="width:${bp}%;height:100%;background:#34D399;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#04122E">${bp > 12 ? bp + '%' : ''}</div></div></div>`)); }
     const PE = data.pensioen; if (PE) T.pen = (card('pen', 'Pensioen', `<div style="display:flex;flex-direction:column;gap:16px;margin-top:12px">${timeline(PE.mike)}${timeline(PE.marie)}</div>`));
     const X = data.index; if (X) T.ix = (card('ix', 'Index', `<div class="huge">${X.waarde.toLocaleString('nl-BE', { minimumFractionDigits: 2 })}</div><div class="mut2">${esc(X.maand)} · nog ${(X.spil - X.waarde).toLocaleString('nl-BE', { minimumFractionDigits: 2 })} punten tot de spilindex</div>`));
     const L = data.loonbarema; if (L) T.lb = (card('lb', 'Loonbarema', `<div style="font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1;margin-top:6px">Categorie ${L.categorie}${String(L.anc).padStart(2, '0')}</div><div style="display:flex;justify-content:space-between;gap:12px;font-size:15px;margin-top:6px"><span style="font-weight:600">Schaduwloon</span><span style="color:#B8C7EE">${euro(L.schaduwloon, 2)}</span></div><div style="display:flex;justify-content:space-between;gap:12px;font-size:15px"><span style="font-weight:600;color:#6EE7B7">Basismaandloon</span><span style="font-weight:700;color:#6EE7B7">${euro(L.basis, 2)}</span></div><div style="display:flex;justify-content:space-between;gap:12px;font-size:15px"><span style="font-weight:600;color:#6EE7B7">Shiftpremie</span><span style="font-weight:700;color:#6EE7B7">${euro(L.shiftpremie, 2)}</span></div>`));
+    const SP = data.spaarplan; if (SP) T.spp = (card('spp', '', spTile(SP)));
     if (S) T.sch = (card('sch', 'Schulden', `<div style="font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1;margin-top:8px">${euro(S.totaal, 2)} <span style="font-size:15px;font-weight:600;color:#9FB2DE">nog te betalen</span></div>`));
-    const order = ['ink', 'bel', 'sch', 'pen', 'vb', 'wk', 'lb', 'ix'], res = order.filter(k => T[k]).map(k => T[k]);
+    const order = ['lf', 'spp', 'ink', 'bel', 'sch', 'pen', 'vb', 'wk', 'lb', 'ix'], res = order.filter(k => T[k]).map(k => T[k]);
     if (!B) res.unshift(`<div class="card mut2">Laad je gegevensbestand in (Meer → Gegevens inladen) om je cijfers op het dashboard te zien.</div>`);
     return res.join('');
   }
   function home() {
     curTab = 'home'; renderNav();
     app.innerHTML = `<h1>Dashboard</h1>` + dashboard();
-    const GO = { wk: () => werkkalender(), vb: () => voetbal('Voetbal'), bel: () => beleggen('Beleggen'), ink: () => inkomsten('Inkomsten'), sch: () => schulden('Schulden'), pen: () => pensioen('Pensioen'), ix: () => indexScherm('Index'), lb: () => loonbarema('Loonbarema') };
+    const GO = { lf: () => leefbudget('Leefbudget'), wk: () => werkkalender(), vb: () => voetbal('Voetbal'), bel: () => beleggen('Beleggen'), ink: () => inkomsten('Inkomsten'), sch: () => schulden('Schulden'), lbd: () => leefbudget('Leefbudget'), spp: () => spaarplan('Spaarplan'), pen: () => pensioen('Pensioen'), ix: () => indexScherm('Index'), lb: () => loonbarema('Loonbarema') };
     app.querySelectorAll('.tile[data-go]').forEach(b => b.onclick = () => { fromDash = true; GO[b.dataset.go](); });
   }
   function boekingen() {
