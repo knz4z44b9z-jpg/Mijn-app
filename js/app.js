@@ -204,7 +204,7 @@ if (typeof document !== 'undefined') (function () {
       <button class="tile" id="f-idx"><b>Index</b><small>Gezondheidsindex en spilindex</small></button>
       <button class="tile" id="f-pen"><b>Pensioen</b><small>Pensioensparen en loopbaan</small></button>
       <button class="tile" id="f-sch"><b>Schulden</b><small>Hypotheek en autolening</small></button>
-      <h2>Modules</h2>
+      <h2>Planning</h2>
       <button class="tile" id="f-wk"><b>Werkkalender</b><small>Je ploegenrooster, verlof en uurwissel</small></button>
       <button class="tile" id="f-vb"><b>Voetbal</b><small>Wedstrijden van KFC Moerbeke B</small></button>`;
     document.getElementById('f-wk').onclick = () => werkkalender();
