@@ -197,6 +197,7 @@ if (typeof document !== 'undefined') (function () {
   function financieel(name) {
     app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>${esc(name)}</h1>
       <button class="tile" id="f-lf"><b>Leefbudget</b><small>Wat je nog kunt besteden in deze periode</small></button>
+      <button class="tile" id="f-vm"><b>Geschat vermogen</b><small>Rekeningen, beleggingen, pensioen en woning</small></button>
       <button class="tile" id="f-bel"><b>Beleggen</b><small>BUX, Saxo, gestort en resultaat</small></button>
       <button class="tile" id="f-spp"><b>Spaarplan</b><small>Gepland tegenover gestort</small></button>
       <button class="tile" id="f-ink"><b>Inkomsten</b><small>Wat er binnenkomt, per maand en per jaar</small></button>
@@ -206,6 +207,7 @@ if (typeof document !== 'undefined') (function () {
       <button class="tile" id="f-sch"><b>Schulden</b><small>Hypotheek en autolening</small></button>`;
     document.getElementById('back').onclick = home;
     document.getElementById('f-lf').onclick = () => { fromDash = false; leefbudget('Leefbudget'); };
+    document.getElementById('f-vm').onclick = () => { fromDash = false; vermogen('Geschat vermogen'); };
     document.getElementById('f-bel').onclick = () => { fromDash = false; beleggen('Beleggen'); };
     document.getElementById('f-sch').onclick = () => { fromDash = false; schulden('Schulden'); };
     document.getElementById('f-spp').onclick = () => { fromDash = false; spaarplan('Spaarplan'); };
@@ -221,6 +223,34 @@ if (typeof document !== 'undefined') (function () {
       <button class="tile" id="p-vb"><b>Voetbal</b><small>Wedstrijden van KFC Moerbeke B</small></button>`;
     document.getElementById('p-wk').onclick = () => werkkalender();
     document.getElementById('p-vb').onclick = () => voetbal('Voetbal');
+  }
+  function vmCalc() {
+    const V = data.vermogen, B = data.beleggen, P = data.pensioen, H = data.schulden && data.schulden.hypotheek;
+    if (!V || !B || !P || !H) return null;
+    const R = V.rekeningen, rek = R.zicht + R.spaar + R.toekomst + R.kids, bel = B.totaal;
+    const fs = x => (x.fondsen || []).reduce((a, f) => a + f.bedrag, 0), pM = fs(P.mike), pV = fs(P.marie), pen = pM + pV;
+    const hyp = H.rest, onr = V.woning - hyp, tot = rek + bel + pen + onr;
+    const afg = H.delen.reduce((a, d) => a + d.afgelost, 0), geleend = H.delen.reduce((a, d) => a + d.bedrag, 0);
+    return { R, rek, bel, pM, pV, pen, hyp, onr, tot, woning: V.woning, afg, geleend, delen: H.delen, B };
+  }
+  function vmTile(c) {
+    const bar = (l, v, col) => `<div><div style="font-size:14px;font-weight:600;margin-bottom:6px">${l}</div><div style="height:12px;border-radius:99px;background:#1B3573"><div style="width:${Math.max(Math.min(v / c.tot * 100, 100), 0)}%;height:100%;border-radius:99px;background:${col}"></div></div></div>`;
+    return `<div style="font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1;margin-top:6px">${euro(c.tot, 2)}</div><div style="display:flex;flex-direction:column;gap:14px;margin-top:16px">${bar('Spaarrekening', c.rek, '#3FA0FF')}${bar('Beleggen', c.bel, '#7DD3FC')}${bar('Pensioensparen', c.pen, '#A5B4FC')}${bar('Aflos hypotheek', c.onr, '#34D399')}</div>`;
+  }
+  function vermogen(name) {
+    const c = vmCalc(); if (!c) { app.innerHTML = noData(name); document.getElementById('back').onclick = backFin; return; }
+    const r = (l, v, col) => `<div class="row li2"><span class="mut">${l}</span><b${col ? ` style="color:${col}"` : ''}>${v}</b></div>`, rl = '<div style="height:1px;background:#223F80;margin:10px 0"></div>';
+    const e2 = x => euro(x, Math.abs(x % 1) > 0.004 ? 2 : 0), pct = Math.round(c.onr / c.woning * 100), pa = Math.round(c.afg / c.geleend * 100);
+    app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>Geschat vermogen</h1><p class="mut">Stand van vandaag · totaal ${euro(c.tot, 2)} · schulden worden niet afgetrokken</p>
+      <div class="card"><div class="dl" style="margin-bottom:8px">Rekeningen · ${e2(c.rek)}</div>${r('Gezamenlijke zichtrekening', e2(c.R.zicht))}${r('Gezamenlijke spaarrekening +1 jaar', e2(c.R.spaar))}${r('Gezamenlijk sparen toekomstig doel', e2(c.R.toekomst))}${r('Spaarrekening kids', e2(c.R.kids))}</div>
+      <div class="card"><div class="dl" style="margin-bottom:8px">Beleggen · ${e2(c.bel)}</div>${r('BUX (Mike, samen, kids)', e2(c.B.bux))}${r('Saxo (Mike)', e2(c.B.saxo))}${r('Cash', e2(c.B.cash))}</div>
+      <div class="card"><div class="dl" style="margin-bottom:8px">Pensioensparen · ${e2(c.pen)}</div>${r('Marie', e2(c.pV))}${r('Mike', e2(c.pM))}</div>
+      <div class="card"><div class="dl" style="margin-bottom:8px">Aflos hypotheek · onroerend vermogen</div><div style="font-size:36px;font-weight:800;letter-spacing:-.02em;color:#6EE7B7">${euro(c.onr, 2)}</div><div class="mut2">Telt mee in het geschatte vermogen</div>
+        <div style="height:28px;border-radius:99px;background:#7F1D1D;overflow:hidden;margin:12px 0"><div style="width:${pct}%;height:100%;background:#34D399;display:flex;align-items:center;padding-left:12px;font-size:13px;font-weight:700;color:#06281C">${pct}%</div></div>
+        ${rl}${r('Geschatte waarde woning (schatting Argenta)', euro(c.woning))}${r('Openstaande kredieten bij Argenta', '− ' + euro(c.hyp, 2), '#FCA5A5')}${rl}${r('Onroerend vermogen', euro(c.onr, 2), '#6EE7B7')}${rl}
+        <div class="dl" style="margin-bottom:6px">Hypotheek per deel</div>${c.delen.map(d => r(`${esc(d.naam)} · tot ${esc(d.tot)}`, euro(d.rest, 2), '#FCA5A5')).join('')}
+        <div class="row" style="margin-top:8px;font-size:14px;color:#B8C7EE"><span>Afgelost ${euro(c.afg, 2)} van ${euro(c.geleend)}</span><span>${pa}%</span></div><div style="height:12px;border-radius:99px;background:#1B3573;margin-top:6px"><div style="width:${pa}%;height:100%;border-radius:99px;background:#34D399"></div></div></div>`;
+    document.getElementById('back').onclick = backFin;
   }
   let who = 'totaal';
   function beleggen(name) {
@@ -446,16 +476,17 @@ if (typeof document !== 'undefined') (function () {
     const PE = data.pensioen; if (PE) T.pen = (card('pen', 'Pensioen', `<div style="display:flex;flex-direction:column;gap:16px;margin-top:12px">${timeline(PE.mike)}${timeline(PE.marie)}</div>`));
     const X = data.index; if (X) T.ix = (card('ix', 'Index', `<div class="huge">${X.waarde.toLocaleString('nl-BE', { minimumFractionDigits: 2 })}</div><div class="mut2">${esc(X.maand)} · nog ${(X.spil - X.waarde).toLocaleString('nl-BE', { minimumFractionDigits: 2 })} punten tot de spilindex</div>`));
     const L = data.loonbarema; if (L) T.lb = (card('lb', 'Loonbarema', `<div style="font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1;margin-top:6px">Categorie ${L.categorie}${String(L.anc).padStart(2, '0')}</div><div style="display:flex;justify-content:space-between;gap:12px;font-size:15px;margin-top:6px"><span style="font-weight:600">Schaduwloon</span><span style="color:#B8C7EE">${euro(L.schaduwloon, 2)}</span></div><div style="display:flex;justify-content:space-between;gap:12px;font-size:15px"><span style="font-weight:600;color:#6EE7B7">Basismaandloon</span><span style="font-weight:700;color:#6EE7B7">${euro(L.basis, 2)}</span></div><div style="display:flex;justify-content:space-between;gap:12px;font-size:15px"><span style="font-weight:600;color:#6EE7B7">Shiftpremie</span><span style="font-weight:700;color:#6EE7B7">${euro(L.shiftpremie, 2)}</span></div>`));
+    { const VC = vmCalc(); if (VC) T.vm = card('vm', 'Geschat vermogen', vmTile(VC)); }
     const SP = data.spaarplan; if (SP) T.spp = (card('spp', '', spTile(SP)));
     if (S) T.sch = (card('sch', 'Schulden', `<div style="font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1;margin-top:8px">${euro(S.totaal, 2)} <span style="font-size:15px;font-weight:600;color:#9FB2DE">nog te betalen</span></div>`));
-    const order = ['lf', 'spp', 'ink', 'bel', 'sch', 'pen', 'vb', 'wk', 'lb', 'ix'], res = order.filter(k => T[k]).map(k => T[k]);
+    const order = ['lf', 'vm', 'spp', 'ink', 'bel', 'sch', 'pen', 'vb', 'wk', 'lb', 'ix'], res = order.filter(k => T[k]).map(k => T[k]);
     if (!B) res.unshift(`<div class="card mut2">Laad je gegevensbestand in (Meer → Gegevens inladen) om je cijfers op het dashboard te zien.</div>`);
     return res.join('');
   }
   function home() {
     curTab = 'home'; renderNav();
     app.innerHTML = `<h1>Dashboard</h1>` + dashboard();
-    const GO = { lf: () => leefbudget('Leefbudget'), wk: () => werkkalender(), vb: () => voetbal('Voetbal'), bel: () => beleggen('Beleggen'), ink: () => inkomsten('Inkomsten'), sch: () => schulden('Schulden'), lbd: () => leefbudget('Leefbudget'), spp: () => spaarplan('Spaarplan'), pen: () => pensioen('Pensioen'), ix: () => indexScherm('Index'), lb: () => loonbarema('Loonbarema') };
+    const GO = { vm: () => vermogen('Geschat vermogen'), lf: () => leefbudget('Leefbudget'), wk: () => werkkalender(), vb: () => voetbal('Voetbal'), bel: () => beleggen('Beleggen'), ink: () => inkomsten('Inkomsten'), sch: () => schulden('Schulden'), lbd: () => leefbudget('Leefbudget'), spp: () => spaarplan('Spaarplan'), pen: () => pensioen('Pensioen'), ix: () => indexScherm('Index'), lb: () => loonbarema('Loonbarema') };
     app.querySelectorAll('.tile[data-go]').forEach(b => b.onclick = () => { fromDash = true; GO[b.dataset.go](); });
   }
   function boekingen() {
