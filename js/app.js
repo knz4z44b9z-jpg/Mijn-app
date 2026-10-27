@@ -99,6 +99,34 @@ if (typeof document !== 'undefined') (function () {
   }
   async function save() { localStorage.setItem(K_DATA, await seal(data)); }
 
+  /* ----- Face ID (WebAuthn + PRF): de toegangscode wordt versleuteld bewaard met een sleutel die enkel Face ID kan vrijgeven ----- */
+  const K_BIO = 'ma_bio', PRF_SALT = enc.encode('mijn-app-faceid-v1');
+  const bioKey = async prf => crypto.subtle.importKey('raw', prf, 'AES-GCM', false, ['encrypt', 'decrypt']);
+  const prfOut = r => { const x = r.getClientExtensionResults(); return x.prf && x.prf.results && x.prf.results.first; };
+  async function bioEnable(code) {
+    if (!window.PublicKeyCredential || !navigator.credentials) throw new Error('niet-ondersteund');
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)), rp: { name: 'Mijn app' },
+      user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'mijn-app', displayName: 'Mijn app' },
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred' },
+      extensions: { prf: { eval: { first: PRF_SALT } } } } });
+    if (!(cred.getClientExtensionResults().prf || {}).enabled) throw new Error('niet-ondersteund');
+    const id = new Uint8Array(cred.rawId);
+    let out = prfOut(cred);
+    if (!out) { const a = await navigator.credentials.get({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), allowCredentials: [{ type: 'public-key', id }], userVerification: 'required', extensions: { prf: { eval: { first: PRF_SALT } } } } }); out = prfOut(a); }
+    if (!out) throw new Error('niet-ondersteund');
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await bioKey(out), enc.encode(code));
+    localStorage.setItem(K_BIO, JSON.stringify({ id: b64(id), iv: b64(iv), ct: b64(ct) }));
+  }
+  async function bioCode() {
+    const o = JSON.parse(localStorage.getItem(K_BIO));
+    const a = await navigator.credentials.get({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)), allowCredentials: [{ type: 'public-key', id: unb64(o.id) }], userVerification: 'required', extensions: { prf: { eval: { first: PRF_SALT } } } } });
+    const out = prfOut(a); if (!out) throw new Error('geen-prf');
+    return dec.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(o.iv) }, await bioKey(out), unb64(o.ct)));
+  }
+
   const app = document.getElementById('app');
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -112,7 +140,7 @@ if (typeof document !== 'undefined') (function () {
       <input id="code" type="password" autocomplete="off" placeholder="Toegangscode">
       ${first ? '<input id="code2" type="password" autocomplete="off" placeholder="Herhaal de code">' : ''}
       <div class="err" id="err"></div><button id="go">${first ? 'Code instellen' : 'Ontgrendelen'}</button></div>
-      <p class="mut">Face ID komt in een volgende versie.</p>`;
+      ${!first && localStorage.getItem(K_BIO) ? '<button class="ghost" id="bio" style="margin-top:12px">Ontgrendel met Face ID</button>' : ''}`;
     const go = async () => {
       const c = document.getElementById('code').value, err = document.getElementById('err');
       try {
@@ -130,6 +158,12 @@ if (typeof document !== 'undefined') (function () {
       } catch (e) { console.error(e); key = null; err.textContent = 'Verkeerde code.'; }
     };
     document.getElementById('go').onclick = go;
+    const bioBtn = document.getElementById('bio');
+    if (bioBtn) bioBtn.onclick = async () => {
+      const err = document.getElementById('err');
+      try { const c = await bioCode(); key = await deriveKey(c, unb64(localStorage.getItem(K_SALT))); data = await open(localStorage.getItem(K_DATA)); home(); }
+      catch (e) { key = null; data = null; err.textContent = 'Face ID lukte niet. Gebruik je toegangscode.'; }
+    };
     document.getElementById('code').onkeydown = e => { if (e.key === 'Enter' && !first) go(); };
   }
 
@@ -428,10 +462,18 @@ if (typeof document !== 'undefined') (function () {
   function meer() {
     curTab = 'meer'; renderNav();
     app.innerHTML = `<h1>Meer</h1>` + `<h2>Modules</h2>` + MODULES.map((m, i) => `<button class="tile" data-i="${i}"><b>${m[0]}</b><small>${m[1]}</small></button>`).join('') +
-      `<h2>Gegevens</h2><div class="card"><div class="row"><button class="ghost" id="exp">Back-up maken</button><button class="ghost" id="imp">Back-up terugzetten</button><button class="ghost" id="lock">Vergrendelen</button></div><p><button class="ghost" id="load">Gegevens inladen</button></p>
+      `<h2>Gegevens</h2><div class="card"><div class="row"><button class="ghost" id="exp">Back-up maken</button><button class="ghost" id="imp">Back-up terugzetten</button><button class="ghost" id="bioset">${localStorage.getItem(K_BIO) ? 'Face ID uitschakelen' : 'Face ID inschakelen'}</button><button class="ghost" id="lock">Vergrendelen</button></div><p><button class="ghost" id="load">Gegevens inladen</button></p>
       <p class="mut">Een back-up is een versleuteld bestand. Bewaar het in iCloud Drive (Bestanden-app).</p><input type="file" id="file" hidden><input type="file" id="gfile" accept=".json" hidden></div>`;
     app.querySelectorAll('.tile[data-i]').forEach(b => b.onclick = () => MODULES[b.dataset.i][2](MODULES[b.dataset.i][0]));
     document.getElementById('lock').onclick = lockScreen;
+    document.getElementById('bioset').onclick = async () => {
+      if (localStorage.getItem(K_BIO)) { localStorage.removeItem(K_BIO); alert('Face ID is uitgeschakeld.'); return meer(); }
+      const c = prompt('Voer je toegangscode in om Face ID in te schakelen:'); if (!c) return;
+      try { await deriveKey(c, unb64(localStorage.getItem(K_SALT))).then(k => crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(JSON.parse(localStorage.getItem(K_DATA)).iv) }, k, unb64(JSON.parse(localStorage.getItem(K_DATA)).ct))); }
+      catch (e) { alert('Verkeerde code.'); return; }
+      try { await bioEnable(c); alert('Face ID is ingeschakeld.'); meer(); }
+      catch (e) { alert(e.message === 'niet-ondersteund' ? 'Face ID wordt op dit toestel of in deze browser niet ondersteund voor deze app. Je toegangscode blijft werken.' : 'Face ID instellen is niet gelukt. Je toegangscode blijft werken.'); }
+    };
     document.getElementById('exp').onclick = () => {
       const blob = new Blob([JSON.stringify({ salt: localStorage.getItem(K_SALT), data: localStorage.getItem(K_DATA) })], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
