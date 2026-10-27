@@ -227,7 +227,7 @@ if (typeof document !== 'undefined') (function () {
   function vmCalc() {
     const V = data.vermogen, B = data.beleggen, P = data.pensioen, H = data.schulden && data.schulden.hypotheek;
     if (!V || !B || !P || !H) return null;
-    const R = V.rekeningen, rek = R.zicht + R.spaar + R.toekomst + R.kids, bel = B.totaal;
+    const R = V.rekeningen, rek = R.spaar + R.toekomst + R.kids, bel = B.totaal;
     const fs = x => (x.fondsen || []).reduce((a, f) => a + f.bedrag, 0), pM = fs(P.mike), pV = fs(P.marie), pen = pM + pV;
     const hyp = H.rest, onr = V.woning - hyp, tot = rek + bel + pen + onr;
     const afg = H.delen.reduce((a, d) => a + d.afgelost, 0), geleend = H.delen.reduce((a, d) => a + d.bedrag, 0);
@@ -242,7 +242,7 @@ if (typeof document !== 'undefined') (function () {
     const r = (l, v, col) => `<div class="row li2"><span class="mut">${l}</span><b${col ? ` style="color:${col}"` : ''}>${v}</b></div>`, rl = '<div style="height:1px;background:#223F80;margin:10px 0"></div>';
     const e2 = x => euro(x, Math.abs(x % 1) > 0.004 ? 2 : 0), pct = Math.round(c.onr / c.woning * 100), pa = Math.round(c.afg / c.geleend * 100);
     app.innerHTML = `<p><button class="ghost" id="back">← Terug</button></p><h1>Geschat vermogen</h1><p class="mut">Stand van vandaag · totaal ${euro(c.tot, 2)} · schulden worden niet afgetrokken</p>
-      <div class="card"><div class="dl" style="margin-bottom:8px">Rekeningen · ${e2(c.rek)}</div>${r('Gezamenlijke zichtrekening', e2(c.R.zicht))}${r('Gezamenlijke spaarrekening +1 jaar', e2(c.R.spaar))}${r('Gezamenlijk sparen toekomstig doel', e2(c.R.toekomst))}${r('Spaarrekening kids', e2(c.R.kids))}</div>
+      <div class="card"><div class="dl" style="margin-bottom:8px">Rekeningen · ${e2(c.rek)}</div>${r('Gezamenlijke spaarrekening +1 jaar', e2(c.R.spaar))}${r('Gezamenlijk sparen toekomstig doel', e2(c.R.toekomst))}${r('Spaarrekening kids', e2(c.R.kids))}</div>
       <div class="card"><div class="dl" style="margin-bottom:8px">Beleggen · ${e2(c.bel)}</div>${r('BUX (Mike, samen, kids)', e2(c.B.bux))}${r('Saxo (Mike)', e2(c.B.saxo))}${r('Cash', e2(c.B.cash))}</div>
       <div class="card"><div class="dl" style="margin-bottom:8px">Pensioensparen · ${e2(c.pen)}</div>${r('Marie', e2(c.pV))}${r('Mike', e2(c.pM))}</div>
       <div class="card"><div class="dl" style="margin-bottom:8px">Aflos hypotheek · onroerend vermogen</div><div style="font-size:36px;font-weight:800;letter-spacing:-.02em;color:#6EE7B7">${euro(c.onr, 2)}</div><div class="mut2">Telt mee in het geschatte vermogen</div>
