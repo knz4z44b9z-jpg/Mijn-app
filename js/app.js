@@ -500,7 +500,7 @@ if (typeof document !== 'undefined') (function () {
     document.getElementById('gfile').onchange = async e => {
       const f = e.target.files[0]; if (!f) return;
       try { const o = JSON.parse(await f.text()); if (o.type !== 'mijn-app-gegevens') throw 0;
-        Object.keys(o.data).forEach(k => { data[k] = o.data[k]; }); await save(); alert('Gegevens ingeladen: ' + Object.keys(o.data).join(', ') + '.');
+        Object.keys(o.data).forEach(k => { if (k === 'voetbal' && data.voetbal && Array.isArray(data.voetbal.uitslagen)) { const keep = new Map(); (o.data.voetbal.uitslagen || []).forEach(u => keep.set(u.y + '-' + u.m + '-' + u.d, u)); data.voetbal.uitslagen.forEach(u => keep.set(u.y + '-' + u.m + '-' + u.d, u)); data.voetbal = Object.assign({}, data.voetbal, o.data.voetbal, { uitslagen: [...keep.values()] }); } else data[k] = o.data[k]; }); await save(); alert('Gegevens ingeladen: ' + Object.keys(o.data).join(', ') + '.');
       } catch (x) { alert('Dit is geen geldig gegevensbestand.'); }
     };
     document.getElementById('imp').onclick = () => document.getElementById('file').click();
@@ -528,8 +528,8 @@ if (typeof document !== 'undefined') (function () {
     const open = MATCHES.map(parseMatch).filter(mt => mt.start !== null && mt.start + 2.5 * HMS <= nowT && !done.has(keyOf(mt.y, mt.m + 1, mt.d)));
     const row = mt => { const r = rateMatch(mt), dd = new Date(mt.dayT); return `<div class="card"><div class="row"><b>${DN[dd.getUTCDay()]} ${mt.d} ${MAANDEN[mt.m]}</b><span class="pill ${mt.home ? 'thuis' : 'uit'}">${mt.home ? 'Thuis' : 'Uit'}</span></div>
       <div>${esc(mt.opp)}</div><div class="row"><span class="mut">${esc(mt.time)}</span>${r ? `<span class="pill ${r.lvl}">${r.lvl}${r.sh ? ' · ' + r.sh : ''}</span>` : ''}</div></div>`; };
-    const W = U.filter(u => u.voor > u.tegen).length, G = U.filter(u => u.voor === u.tegen).length, L = U.length - W - G;
-    const dv = U.reduce((a, u) => a + u.voor, 0), dt = U.reduce((a, u) => a + u.tegen, 0);
+    const P = U.filter(u => !u.afgelast), W = P.filter(u => u.voor > u.tegen).length, G = P.filter(u => u.voor === u.tegen).length, L = P.length - W - G;
+    const dv = P.reduce((a, u) => a + u.voor, 0), dt = P.reduce((a, u) => a + u.tegen, 0);
     const stat = (n, l) => `<div style="flex:1;text-align:center"><div style="font-size:26px;font-weight:800">${n}</div><div class="mut2">${l}</div></div>`;
     const stand = V.stand || [], toonAlles = vbAlle, mi = stand.findIndex(t => /moerbeke/i.test(t.ploeg)), rows = (toonAlles ? stand : stand.slice(0, 5)).map((t, i) => ({ t, i })); if (!toonAlles && mi >= 5) rows.push({ t: stand[mi], i: mi, gap: true });
     const sg = n => n > 0 ? '+' + n : n < 0 ? '−' + Math.abs(n) : '0';
@@ -537,19 +537,21 @@ if (typeof document !== 'undefined') (function () {
       ${stand.length > 5 ? `<button class="ghost" id="alle" style="margin-top:10px">${toonAlles ? 'Toon minder' : 'Toon alle ' + stand.length}</button>` : ''}
       <p class="mut2" style="margin:8px 0 0">W = winst, G = gelijk, V = verlies, + en − = doelpunten voor en tegen.</p></div>` : '';
     const gesp = U.length ? `<h2>Gespeeld</h2><div class="card">${U.slice().sort((x, y) => keyD(x) - keyD(y)).map(u => { const t = Date.UTC(u.y, u.m - 1, u.d), dd = new Date(t), res = u.voor > u.tegen ? 'gewonnen' : u.voor === u.tegen ? 'gelijk' : 'verloren', col = u.voor > u.tegen ? '#6EE7B7' : u.voor === u.tegen ? '#FCD34D' : '#FCA5A5';
-      return `<div class="row" style="padding:8px 0;border-top:1px solid var(--line)"><span>${DN[dd.getUTCDay()]} ${u.d} ${MAANDEN[u.m - 1].slice(0, 3)} · <span class="pill ${u.thuis ? 'thuis' : 'uit'}">${u.thuis ? 'Thuis' : 'Uit'}</span> ${esc(u.opp)}</span><b style="color:${col};white-space:nowrap">${u.voor} - ${u.tegen} ${res}</b></div>`; }).join('')}</div>` : '';
+      return `<div class="row" style="padding:8px 0;border-top:1px solid var(--line)"><span>${DN[dd.getUTCDay()]} ${u.d} ${MAANDEN[u.m - 1].slice(0, 3)} · <span class="pill ${u.thuis ? 'thuis' : 'uit'}">${u.thuis ? 'Thuis' : 'Uit'}</span> ${esc(u.opp)}</span><b style="color:${u.afgelast ? '#B8C7EE' : col};white-space:nowrap">${u.afgelast ? 'afgelast' : u.voor + ' - ' + u.tegen + ' ' + res} <button class="ghost wis" data-k="${u.y}-${u.m}-${u.d}" aria-label="Verwijder" style="padding:2px 8px;min-height:0;margin-left:6px">✕</button></b></div>`; }).join('')}</div>` : '';
     function keyD(u) { return Date.UTC(u.y, u.m - 1, u.d); }
     const inv = open.length ? `<h2>Uitslag invullen</h2>${open.map((mt, i) => `<div class="card"><div class="row"><b>${lab(mt)} · ${mt.home ? 'Thuis' : 'Uit'}</b></div><div>${esc(mt.opp)}</div>
-      <div class="row" style="margin-top:8px;gap:8px"><input id="v${i}" type="number" inputmode="numeric" min="0" placeholder="KFC Moerbeke" style="width:50%"><input id="t${i}" type="number" inputmode="numeric" min="0" placeholder="${esc(mt.opp)}" style="width:50%"></div><button id="s${i}" style="margin-top:8px">Uitslag bewaren</button></div>`).join('')}` : '';
+      <div class="row" style="margin-top:8px;gap:8px"><input id="v${i}" type="number" inputmode="numeric" min="0" placeholder="KFC Moerbeke" style="width:50%"><input id="t${i}" type="number" inputmode="numeric" min="0" placeholder="${esc(mt.opp)}" style="width:50%"></div><div class="row" style="gap:8px;margin-top:8px"><button id="s${i}">Uitslag bewaren</button><button class="ghost" id="a${i}">Afgelast</button></div></div>`).join('')}` : '';
     app.innerHTML = `<p><button class="ghost" id="back">‹ Terug</button></p><h1>${esc(name)}</h1><p class="mut">KFC Moerbeke B · Reserven · seizoen 2026-2027</p>
       <div class="card"><div class="mut">Volgende wedstrijd</div>${nx ? `<h2 style="margin:4px 0">${esc(nx.opp)}</h2><div>${DN[new Date(nx.dayT).getUTCDay()]} ${nx.d} ${MAANDEN[nx.m]} · ${nx.time} · ${nx.home ? 'thuis' : 'uit'}</div>
       <div class="mut">Nog ${Math.round((nx.dayT - todayT) / DAYMS)} dag(en)</div>` : '<div>Geen wedstrijd gepland</div>'}</div>
-      <div class="card"><div class="dl" style="margin-bottom:10px">Seizoen tot nu toe</div><div class="row" style="gap:4px">${stat(U.length, 'gespeeld')}${stat(W, 'gewonnen')}${stat(dv + ' – ' + dt, 'doelpunten')}${stat(up.length, 'nog te spelen')}</div>${G || L ? `<div class="mut2" style="margin-top:8px">${G} gelijk · ${L} verloren</div>` : ''}</div>
+      <div class="card"><div class="dl" style="margin-bottom:10px">Seizoen tot nu toe</div><div class="row" style="gap:4px">${stat(P.length, 'gespeeld')}${stat(W, 'gewonnen')}${stat(dv + ' – ' + dt, 'doelpunten')}${stat(up.length, 'nog te spelen')}</div>${G || L ? `<div class="mut2" style="margin-top:8px">${G} gelijk · ${L} verloren</div>` : ''}</div>
       ${inv}${tbl}
       <h2>Komende wedstrijden (${up.length})</h2>${up.map(row).join('')}${gesp}
       <p class="mut">Botst = overlapt met een shift. Krap = minder dan 4 uur ruimte. Kan = geen probleem.</p>`;
     document.getElementById('back').onclick = home;
     const al = document.getElementById('alle'); if (al) al.onclick = () => { vbAlle = !vbAlle; voetbal(name); };
+    open.forEach((mt, i) => document.getElementById('a' + i).onclick = async () => { U.push({ y: mt.y, m: mt.m + 1, d: mt.d, thuis: mt.home, opp: mt.opp, afgelast: true }); await save(); voetbal(name); });
+    app.querySelectorAll('.wis').forEach(b => b.onclick = async () => { if (!confirm('Deze uitslag verwijderen?')) return; V.uitslagen = U.filter(u => (u.y + '-' + u.m + '-' + u.d) !== b.dataset.k); await save(); voetbal(name); });
     open.forEach((mt, i) => document.getElementById('s' + i).onclick = async () => {
       const v = parseInt(document.getElementById('v' + i).value, 10), t = parseInt(document.getElementById('t' + i).value, 10);
       if (isNaN(v) || isNaN(t) || v < 0 || t < 0) { alert('Vul beide scores in.'); return; }
