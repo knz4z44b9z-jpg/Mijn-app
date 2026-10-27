@@ -203,12 +203,7 @@ if (typeof document !== 'undefined') (function () {
       <button class="tile" id="f-lb"><b>Loonbarema</b><small>Je categorie en de weddetabel</small></button>
       <button class="tile" id="f-idx"><b>Index</b><small>Gezondheidsindex en spilindex</small></button>
       <button class="tile" id="f-pen"><b>Pensioen</b><small>Pensioensparen en loopbaan</small></button>
-      <button class="tile" id="f-sch"><b>Schulden</b><small>Hypotheek en autolening</small></button>
-      <h2>Planning</h2>
-      <button class="tile" id="f-wk"><b>Werkkalender</b><small>Je ploegenrooster, verlof en uurwissel</small></button>
-      <button class="tile" id="f-vb"><b>Voetbal</b><small>Wedstrijden van KFC Moerbeke B</small></button>`;
-    document.getElementById('f-wk').onclick = () => werkkalender();
-    document.getElementById('f-vb').onclick = () => voetbal('Voetbal');
+      <button class="tile" id="f-sch"><b>Schulden</b><small>Hypotheek en autolening</small></button>`;
     document.getElementById('back').onclick = home;
     document.getElementById('f-lf').onclick = () => { fromDash = false; leefbudget('Leefbudget'); };
     document.getElementById('f-bel').onclick = () => { fromDash = false; beleggen('Beleggen'); };
@@ -218,6 +213,14 @@ if (typeof document !== 'undefined') (function () {
     document.getElementById('f-idx').onclick = () => { fromDash = false; indexScherm('Index'); };
     document.getElementById('f-pen').onclick = () => { fromDash = false; pensioen('Pensioen'); };
     document.getElementById('f-lb').onclick = () => { fromDash = false; loonbarema('Loonbarema'); };
+  }
+  function planning() {
+    curTab = 'plan'; renderNav();
+    app.innerHTML = `<h1>Planning</h1>
+      <button class="tile" id="p-wk"><b>Werkkalender</b><small>Je ploegenrooster, verlof en uurwissel</small></button>
+      <button class="tile" id="p-vb"><b>Voetbal</b><small>Wedstrijden van KFC Moerbeke B</small></button>`;
+    document.getElementById('p-wk').onclick = () => werkkalender();
+    document.getElementById('p-vb').onclick = () => voetbal('Voetbal');
   }
   let who = 'totaal';
   function beleggen(name) {
@@ -464,9 +467,9 @@ if (typeof document !== 'undefined') (function () {
     let n = document.getElementById('nav');
     if (!n) { n = document.createElement('nav'); n.id = 'nav'; document.body.appendChild(n); }
     const it = (k, l, svg) => `<button data-k="${k}" class="${curTab === k ? 'on' : ''}" ${k === 'home' ? 'aria-label="Home"' : ''}>${svg || l}</button>`;
-    n.innerHTML = it('home', '', '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-6h4v6"/></svg>') + it('fin', 'Financieel') + it('meer', 'Meer');
+    n.innerHTML = it('home', '', '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-6h4v6"/></svg>') + it('fin', 'Financieel') + it('plan', 'Planning') + it('meer', 'Meer');
     n.style.display = 'flex';
-    n.querySelectorAll('button').forEach(b => b.onclick = () => { const k = b.dataset.k; if (k === 'home') home(); else if (k === 'fin') { fromDash = false; curTab = 'fin'; renderNav(); financieel('Financieel'); } else meer(); });
+    n.querySelectorAll('button').forEach(b => b.onclick = () => { const k = b.dataset.k; if (k === 'home') home(); else if (k === 'fin') { fromDash = false; curTab = 'fin'; renderNav(); financieel('Financieel'); } else if (k === 'plan') planning(); else meer(); });
   }
   function meer() {
     curTab = 'meer'; renderNav();
