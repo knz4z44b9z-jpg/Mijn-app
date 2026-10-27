@@ -204,7 +204,11 @@ if (typeof document !== 'undefined') (function () {
       <button class="tile" id="f-idx"><b>Index</b><small>Gezondheidsindex en spilindex</small></button>
       <button class="tile" id="f-pen"><b>Pensioen</b><small>Pensioensparen en loopbaan</small></button>
       <button class="tile" id="f-sch"><b>Schulden</b><small>Hypotheek en autolening</small></button>
-      <p class="mut">Leefbudget, Inkomsten, Spaarplan, Pensioen, Loonbarema, Index en Vermogen volgen.</p>`;
+      <h2>Modules</h2>
+      <button class="tile" id="f-wk"><b>Werkkalender</b><small>Je ploegenrooster, verlof en uurwissel</small></button>
+      <button class="tile" id="f-vb"><b>Voetbal</b><small>Wedstrijden van KFC Moerbeke B</small></button>`;
+    document.getElementById('f-wk').onclick = () => werkkalender();
+    document.getElementById('f-vb').onclick = () => voetbal('Voetbal');
     document.getElementById('back').onclick = home;
     document.getElementById('f-lf').onclick = () => { fromDash = false; leefbudget('Leefbudget'); };
     document.getElementById('f-bel').onclick = () => { fromDash = false; beleggen('Beleggen'); };
@@ -460,16 +464,15 @@ if (typeof document !== 'undefined') (function () {
     let n = document.getElementById('nav');
     if (!n) { n = document.createElement('nav'); n.id = 'nav'; document.body.appendChild(n); }
     const it = (k, l, svg) => `<button data-k="${k}" class="${curTab === k ? 'on' : ''}" ${k === 'home' ? 'aria-label="Home"' : ''}>${svg || l}</button>`;
-    n.innerHTML = it('home', '', '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-6h4v6"/></svg>') + it('boek', 'Boekingen') + it('bel', 'Beleggen') + it('meer', 'Meer');
+    n.innerHTML = it('home', '', '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-6h4v6"/></svg>') + it('fin', 'Financieel') + it('meer', 'Meer');
     n.style.display = 'flex';
-    n.querySelectorAll('button').forEach(b => b.onclick = () => { const k = b.dataset.k; if (k === 'home') home(); else if (k === 'boek') boekingen(); else if (k === 'bel') { fromDash = true; curTab = 'bel'; renderNav(); beleggen('Beleggen'); } else meer(); });
+    n.querySelectorAll('button').forEach(b => b.onclick = () => { const k = b.dataset.k; if (k === 'home') home(); else if (k === 'fin') { fromDash = false; curTab = 'fin'; renderNav(); financieel('Financieel'); } else meer(); });
   }
   function meer() {
     curTab = 'meer'; renderNav();
-    app.innerHTML = `<h1>Meer</h1>` + `<h2>Modules</h2>` + MODULES.map((m, i) => `<button class="tile" data-i="${i}"><b>${m[0]}</b><small>${m[1]}</small></button>`).join('') +
+    app.innerHTML = `<h1>Meer</h1>` +
       `<h2>Gegevens</h2><div class="card"><div class="row"><button class="ghost" id="exp">Back-up maken</button><button class="ghost" id="imp">Back-up terugzetten</button><button class="ghost" id="bioset">${localStorage.getItem(K_BIO) ? 'Face ID uitschakelen' : 'Face ID inschakelen'}</button><button class="ghost" id="lock">Vergrendelen</button></div><p><button class="ghost" id="load">Gegevens inladen</button></p>
       <p class="mut">Een back-up is een versleuteld bestand. Bewaar het in iCloud Drive (Bestanden-app).</p><input type="file" id="file" hidden><input type="file" id="gfile" accept=".json" hidden></div>`;
-    app.querySelectorAll('.tile[data-i]').forEach(b => b.onclick = () => MODULES[b.dataset.i][2](MODULES[b.dataset.i][0]));
     document.getElementById('lock').onclick = lockScreen;
     document.getElementById('bioset').onclick = () => {
       if (localStorage.getItem(K_BIO)) { localStorage.removeItem(K_BIO); alert('Face ID is uitgeschakeld.'); return meer(); }
