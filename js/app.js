@@ -355,11 +355,11 @@ if (typeof document !== 'undefined') (function () {
   const MND = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
   function leefCalc(Lf) {
     const I = Lf.inkomsten, V = Lf.vast, S = Lf.sparen, ink = I.loonMike + I.loonMarie, vast = V.hypotheek + V.auto + V.creche,
-      belNet = Math.max(S.beleggen - (I.kindergeld || 0), 0), spar = S.vaste + S.toekomstige + S.pensioenMike + S.pensioenMarie + belNet, rest = ink - vast - spar - (Lf.aanzuivering || 0),
-      L = Math.max(Math.min(Lf.doel, rest), 0), B = Math.max(rest - Lf.doel, 0), U = Lf.uitgegeven, nog = L - U, bufLeft = Math.max(B - Math.max(U - L, 0), 0);
+      belNet = Math.max(S.beleggen - (I.kindergeld || 0), 0), pens = S.pensioenMike + S.pensioenMarie, spar = S.vaste + S.toekomstige + belNet, rest = ink - vast - spar - (Lf.aanzuivering || 0),
+      L = Math.max(Math.min(Lf.doel, rest), 0), B = Math.max(rest - Lf.doel, 0), U = Lf.uitgegeven, nog = L - U - pens, bufLeft = Math.max(B - Math.max(U + pens - L, 0), 0);
     const st = new Date(Lf.start + 'T00:00:00'), en = new Date(Lf.einde + 'T00:00:00'), t = new Date(); t.setHours(0, 0, 0, 0);
     const dagen = Math.max(Math.round((en - t) / DAYMS) + 1, 0), fmtD = x => x.getDate() + ' ' + MND[x.getMonth()];
-    return { ink, vast, spar, rest, L, B, U, nog, bufLeft, dagen, periode: fmtD(st) + ' – ' + fmtD(en), besteedPct: L > 0 ? Math.min(U / L * 100, 100) : 100 };
+    return { ink, vast, spar, pens, rest, L, B, U, nog, bufLeft, dagen, periode: fmtD(st) + ' – ' + fmtD(en), besteedPct: L > 0 ? Math.min(U / L * 100, 100) : 100 };
   }
   function leefbudget(name) {
     const Lf = data.leefbudget; if (!Lf) { app.innerHTML = noData(name); document.getElementById('back').onclick = backFin; return; }
@@ -376,10 +376,10 @@ if (typeof document !== 'undefined') (function () {
         <div style="display:flex;flex-direction:column;gap:12px;font-size:15px">${chip('Inkomsten', '#14532D', '#1E7A43')}
         ${row('Loon Mike', e(I.loonMike))}${row('Loon Marie', e(I.loonMarie))}${row('waarvan RVA-bijpassing', e(I.rva), 'padding-left:18px;font-size:14px;color:#B8C7EE')}${row('Totaal inkomsten', '<b>' + e(c.ink) + '</b>')}${hr}
         ${chip('Grote vaste kosten', '#7F1D1D', '#A32A2A')}${row('Hypotheek', '− ' + e(V.hypotheek))}${row('Autolening', '− ' + e(V.auto))}${row('Crèche', '− ' + e(V.creche))}${row('Totaal vaste kosten', '<b>− ' + e(c.vast) + '</b>')}${hr}
-        ${chip('Sparen', '#1E3A8A', '#2F55B8')}${row('Vaste spaarrekening', '− ' + e(S.vaste), 'color:#B8C7EE')}${row('Toekomstige spaarrekening', '− ' + e(S.toekomstige), 'color:#B8C7EE')}${row('Pensioensparen Mike', '− ' + e(S.pensioenMike), 'color:#B8C7EE')}${row('Pensioensparen Marie', '− ' + e(S.pensioenMarie), 'color:#B8C7EE')}${row('Beleggen', '− ' + e(Math.max(S.beleggen - (I.kindergeld || 0), 0)), 'color:#B8C7EE')}${I.kindergeld ? row('Het kindergeld (' + e(I.kindergeld) + ') betaalt ' + e(Math.min(I.kindergeld, S.beleggen)) + ' van de ' + e(S.beleggen) + ' beleggen', '', 'padding-left:18px;font-size:13px;color:#9FB2DE') : ''}${Lf.aanzuivering ? row('Aanvullen spaarrekening', '− ' + e(Lf.aanzuivering), 'color:#B8C7EE') : ''}${row('Totaal sparen', '<b>− ' + e(c.spar + (Lf.aanzuivering || 0)) + '</b>')}${hr}
+        ${chip('Sparen', '#1E3A8A', '#2F55B8')}${row('Vaste spaarrekening', '− ' + e(S.vaste), 'color:#B8C7EE')}${row('Toekomstige spaarrekening', '− ' + e(S.toekomstige), 'color:#B8C7EE')}${row('Beleggen', '− ' + e(Math.max(S.beleggen - (I.kindergeld || 0), 0)), 'color:#B8C7EE')}${I.kindergeld ? row('Het kindergeld (' + e(I.kindergeld) + ') betaalt ' + e(Math.min(I.kindergeld, S.beleggen)) + ' van de ' + e(S.beleggen) + ' beleggen', '', 'padding-left:18px;font-size:13px;color:#9FB2DE') : ''}${Lf.aanzuivering ? row('Aanvullen spaarrekening', '− ' + e(Lf.aanzuivering), 'color:#B8C7EE') : ''}${row('Totaal sparen', '<b>− ' + e(c.spar + (Lf.aanzuivering || 0)) + '</b>')}${hr}
         <div style="display:flex;justify-content:space-between"><span style="font-weight:700">Leefbudget</span><b>${e(c.L)}</b></div>
         <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:20px;font-weight:800;color:#FCA5A5"><span>Al uitgegeven</span><span>${e(c.U)}</span></div>
-        <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:20px;font-weight:800;color:${over ? '#FCA5A5' : '#6EE7B7'}"><span>Nog te besteden</span><span>${over ? '− ' + e(-c.nog) : e(c.nog)}</span></div>
+        <div style="display:flex;justify-content:space-between;color:#B8C7EE"><span>Gereserveerd: pensioensparen (zit in je leefbudget)</span><span>− ${e(c.pens)}</span></div><div style="display:flex;justify-content:space-between;align-items:baseline;font-size:20px;font-weight:800;color:${over ? '#FCA5A5' : '#6EE7B7'}"><span>Nog te besteden</span><span>${over ? '− ' + e(-c.nog) : e(c.nog)}</span></div>
         ${!over && c.dagen > 0 ? `<div style="text-align:right;font-size:13px;color:#B8C7EE;margin-top:-6px">± ${e(c.nog / c.dagen)} per dag</div>` : ''}
         ${over ? `<div style="text-align:right;font-size:13px;color:#FCD34D;margin-top:-6px">Boven je leefbudget: je buffer wordt aangesproken</div>` : ''}${hr}
         <div style="display:flex;justify-content:space-between"><span style="font-weight:700">Buffer</span><b>${e(c.bufLeft)}</b></div><div class="mut2" style="margin-top:4px">Beginbedrag van deze periode: ${e(c.B)}</div></div></article>
